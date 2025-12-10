@@ -1,0 +1,5 @@
+{
+  "name": "Faultline",
+  "description": "An inference autopsy tool that dissects AI answers into atomic claims, verifies them against real-world data using Gemini 3, and highlights logical fractures.",
+  "requestFramePermissions": []
+}
