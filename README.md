@@ -1,39 +1,35 @@
-<img src="logo.png" alt="Faultline Logo" width="100%" align=center>
-
 # Faultline: Expose where your AI’s reasoning will crack under pressure.
 
-**Faultline** is a forensic analysis tool designed to build a "trust layer" for AI-generated content. Instead of just generating more text, Faultline dissects AI answers into atomic claims, verifies them against real-world data using Google Search grounding, and visualizes logical fractures in the reasoning chain. Faultline finds where your AI’s reasoning will crack under pressure. An Inference Autopsy for AI Answers.
+**Faultline** is a seismic stress-test for AI answers. Instead of just generating more text, Faultline maps the geological structure of an argument, stress-tests atomic claims against real-world data using Gemini 3 Pro, and detects the logical fault lines where the answer is likely to collapse.
 
-| Home Preview | Scan Preview |
-|--------------|--------------|
-| <img src="Faultline-Screenshot-0.png" width="100%" /> | <img src="Faultline-Screenshot-1.png" width="100%" /> |
+<img src="https://via.placeholder.com/800x400/0f172a/f97316?text=Faultline+Seismic+Survey" alt="Faultline App Preview" width="100%" />
 
 ## 🚀 The Mission
 
-As AI systems move into high-stakes domains like healthcare, finance, and policy, hallucinations and overconfident errors become systemic risks. Every answer has hidden fault lines in its logic; this thing exposes them. Faultline weaponsizes Gemini 3 Pro's reasoning and search capabilities to answer one critical question: **"Can I trust this answer?"**
+As AI systems move into high-stakes domains like healthcare, finance, and policy, hidden structural weaknesses (hallucinations) become systemic risks. **Faultline** treats information like a building: verify the foundation, test the load-bearing pillars, and condemn the structure if it's unsafe.
 
 ## ✨ Key Features
 
-### 1. Atomic Decomposition
-Faultline breaks down dense paragraphs into a **Claim Graph**.
-- Extracts individual assertions using Gemini 3 Pro.
+### 1. Structural Mapping
+Faultline breaks down dense paragraphs into a **Tectonic Map**.
+- Extracts atomic "structural elements" (claims) using Gemini 3 Pro.
 - Classifies them by type (`Fact`, `Opinion`, `Interpretation`).
-- Scores them by `Importance` (1-5) to prioritize verification.
+- Segregates **"Load Bearing"** facts (Importance ≥ 3) from subjective filler ("Untested/Skipped").
 
-### 2. Live Verification with Search Grounding
-It doesn't just guess; it checks.
-- High-importance factual claims are cross-referenced with live Google Search results.
-- Returns a verdict: `Supported`, `Contradicted`, `Mixed`, or `Unverified`.
-- Provides clickable source links and an explanation for every judgment.
+### 2. Live Seismic Stress Testing
+It doesn't just guess; it applies pressure.
+- **Seismic Barometer**: A real-time visualizer that tracks the active stress-testing process.
+- **Parallel Verification**: High-importance factual claims are cross-referenced with live Google Search results.
+- Returns a structural verdict: `Stable` (Supported), `Fractured` (Contradicted), or `Unstable` (Mixed).
 
-### 3. The Autopsy Dashboard
-A "forensic lab" interface for your text.
-- **Risk Scorecard**: Instant visual assessment of the answer's reliability.
-- **Color-Coded Analysis**: See exactly which sentences hold up and which collapse under scrutiny.
-- **Forensic Summary**: A generated critique of the overall logic.
+### 3. Seismic Integrity Report
+A dashboard for structural engineers of information.
+- **Stability Score**: A dynamic score calculated strictly from *tested* elements (`Supported / Tested Claims`), ensuring a fair rating that ignores subjective opinions.
+- **Fault Line Detection**: Visualizes exactly which sentences hold up and which collapse.
+- **Structural Assessment**: A professional engineering critique of the logic.
 
-### 4. Constructive Feedback loop
-- **"Ask Better Next Time"**: The system generates an improved prompt that forces the AI to be more rigorous, helping users learn to prompt-engineer for accuracy.
+### 4. Foundation Reinforcement
+- **"Reinforce Foundations"**: The system drafts a "Blueprint Prompt"—a stronger, more rigorous prompt you can use to regenerate the answer with better structural integrity.
 
 ---
 
@@ -43,44 +39,32 @@ A "forensic lab" interface for your text.
 - **Grounding**: Google Search Tool (for live fact-checking)
 - **Frontend**: React 19, TypeScript
 - **Styling**: Tailwind CSS
-- **Icons**: Lucide React
+- **Visualization**: Custom SVG Charts & CSS Animations
 
 ---
 
 ## 🏗 Architecture
 
-### 1. Extraction Phase
-The raw input text is sent to `gemini-3-pro-preview` with a strict JSON schema to extract an array of `Claim` objects.
+### 1. Survey Phase (Extraction)
+The raw input text is sent to `gemini-3-pro-preview` with a strict JSON schema to extract an array of `Claim` objects (Structural Elements).
 
-```typescript
-interface Claim {
-  id: string;
-  text: string;
-  type: 'fact' | 'opinion' | 'interpretation';
-  importance: number;
-}
-```
+### 2. Stress Test Phase (Verification)
+The app filters for load-bearing facts. It then runs **parallel verification requests** using the `googleSearch` tool. This ensures each pillar is checked against live web data. Non-factual or low-importance claims are marked as `Untested` (Skipped) to avoid skewing the integrity score.
 
-### 2. Verification Phase
-The app filters for high-importance facts (Importance ≥ 3). It then runs **parallel verification requests** using the `googleSearch` tool. This ensures each claim is checked against live web data, not just the model's training set.
-
-### 3. Synthesis Phase
-The results are aggregated to calculate an **Overall Risk Level** (`Low`, `Medium`, `High`, `Critical`) based on the ratio of contradicted to supported claims. A final pass generates a critique and an optimized prompt.
+### 3. Assessment Phase (Synthesis)
+The results are aggregated to calculate an **Overall Risk Level** (`Low`, `Medium`, `High`, `Critical`) based on the ratio of fractured elements. A final pass generates a structural assessment and a reinforcement prompt.
 
 ---
 
 ## 📦 Installation & Setup
 
-This project is designed to run in a modern web environment (like Google AI Studio or a standard React build).
-
 1. **Clone the repository**
-2. **Install dependencies** (if running locally)
+2. **Install dependencies**
    ```bash
    npm install
    ```
 3. **Environment Configuration**
    You must have a valid Google Gemini API Key.
-   Create a `.env` file or export the variable:
    ```bash
    export API_KEY="your_gemini_api_key"
    ```
@@ -90,37 +74,9 @@ This project is designed to run in a modern web environment (like Google AI Stud
    npm start
    ```
 
-## 🧑‍💻 Development
-
-- Install deps: `npm install`
-- Env: copy `.env.example` to `.env` and fill provider keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `CUSTOM_SEARCH_API_KEY`, `GOOGLE_CSE_ID`)
-- Dev server: `npm run dev`
-- Lint/format: `npm run lint` / `npm run format`
-- Tests: `npm run test -- --watch=false`
-- Optional backend proxy (keeps keys server-side): `npm run proxy:dev` (uses `server/proxy.ts`)
-- Performance modes: choose **Fast/Balanced/Full** in the UI to adjust max verifications, concurrency, retries, and timeouts. Fast runs fewer checks with shorter timeouts; Full is exhaustive.
-
-> Note: For production, run LLM and search calls through a backend proxy to avoid exposing API keys in the browser.
-
-## 🤝 Contributing
-- Read `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`.
-- Keep PRs focused; add tests for logic changes.
-- No secrets in commits; `.env` is ignored, `.env.example` is provided.
-
-## 🛣 Roadmap (short)
-- Backend proxy for provider/search calls (remove browser-key exposure)
-- Claim graph/weakest-chain visualization
-- Multimodal upload (PDF/image OCR) to claims pipeline
-- Deeper evidence: configurable search providers and citation snippets
-- Analytics/telemetry toggle for reliability (opt-in)
-- Performance modes: fast vs full autopsy (tune MAX_VERIFICATIONS, concurrency, timeouts)
-- Retry/backoff tuning and per-claim timeouts to reduce silent drops
-- Concurrency controls and batching to avoid provider throttling
-- Faster verification models/paths (lighter models, optional search) for snappier UX
-
 ## 🛡 Disclaimer
 
-Faultline is a tool for **augmenting human judgment**, not replacing it. While it uses advanced grounding to verify claims, it can still be subject to search bias or misinterpretation of complex sources. Always review the provided sources for critical decisions.
+Faultline is a tool for **augmenting human judgment**, not replacing it. While it uses advanced grounding to verify claims, geological surveys of information can still be subject to interpretation. Always review the provided sources for critical decisions.
 
 ---
 

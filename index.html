@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Faultline - Inference Autopsy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       // Simple process polyfill
@@ -14,6 +15,45 @@
         window.process.env = {};
       }
     </script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #0f172a; /* Slate 900 */
+        color: #f1f5f9; /* Slate 100 */
+      }
+      /* Custom scrollbar for webkit */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b; 
+      }
+
+      /* Seismic Bar Animation */
+      @keyframes seismic-pulse {
+        0%, 100% { height: 15%; opacity: 0.4; }
+        50% { height: 100%; opacity: 1; }
+      }
+      .animate-seismic {
+        animation: seismic-pulse 0.8s ease-in-out infinite;
+      }
+      
+      @keyframes scan-line {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+      }
+      .animate-scan {
+        animation: scan-line 2s linear infinite;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {
