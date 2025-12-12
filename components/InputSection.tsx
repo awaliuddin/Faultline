@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Upload, Search, FileText } from 'lucide-react';
+import { Upload, Search, FileText, Settings2 } from 'lucide-react';
+import type { ModelProvider } from '../types';
 
 interface InputSectionProps {
   onAnalyze: (text: string) => void;
   isProcessing: boolean;
+  provider: ModelProvider;
+  onProviderChange: (provider: ModelProvider) => void;
+  mode: 'fast' | 'balanced' | 'full';
+  onModeChange: (mode: 'fast' | 'balanced' | 'full') => void;
 }
 
-export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcessing }) => {
+export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcessing, provider, onProviderChange, mode, onModeChange }) => {
   const [inputText, setInputText] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -19,11 +24,15 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[80vh]">
       <div className="text-center mb-10">
-        <h1 className="text-5xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500">
-          Faultline
-        </h1>
+        <div className="flex flex-col items-center gap-4 mb-4">
+          <img
+            src="/logo.png"
+            alt="Faultline logo"
+            className="h-24 md:h-32 w-auto rounded-xl shadow-lg shadow-cyan-900/50"
+          />
+        </div>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-          The inference autopsy for AI answers. Paste any AI-generated text to dissect its claims, check them against reality, and find the hallucinations.
+          Paste any AI answer. Faultline runs a seismic check on every claim, compares it against the real world, and flags the weak points before they break in production.
         </p>
       </div>
 
@@ -44,6 +53,30 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
                 <Upload size={18} />
                 <span className="text-sm">Upload Screenshot</span>
               </button>
+              <div className="flex items-center space-x-2 text-slate-400 text-sm">
+                <Settings2 size={16} className="text-slate-500" />
+                <select
+                  value={provider}
+                  onChange={(e) => onProviderChange(e.target.value as ModelProvider)}
+                  disabled={isProcessing}
+                  className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value="google">Google (Gemini 3)</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="local">Local (offline)</option>
+                </select>
+                <select
+                  value={mode}
+                  onChange={(e) => onModeChange(e.target.value as 'fast' | 'balanced' | 'full')}
+                  disabled={isProcessing}
+                  className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value="fast">Fast</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="full">Full</option>
+                </select>
+              </div>
             </div>
             
             <button
@@ -63,7 +96,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
               ) : (
                 <>
                   <Search size={18} />
-                  <span>Run Autopsy</span>
+                  <span>Run seismic scan</span>
                 </>
               )}
             </button>

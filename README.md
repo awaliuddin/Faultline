@@ -1,8 +1,12 @@
+<img src="logo.png" alt="Faultline Logo" width="100%" align=center>
+
 # Faultline: Expose where your AI’s reasoning will crack under pressure.
 
 **Faultline** is a forensic analysis tool designed to build a "trust layer" for AI-generated content. Instead of just generating more text, Faultline dissects AI answers into atomic claims, verifies them against real-world data using Google Search grounding, and visualizes logical fractures in the reasoning chain. Faultline finds where your AI’s reasoning will crack under pressure. An Inference Autopsy for AI Answers.
 
-<img src="https://via.placeholder.com/800x400/0f172a/06b6d4?text=Faultline+Preview" alt="Faultline App Preview" width="100%" />
+| Home Preview | Scan Preview |
+|--------------|--------------|
+| <img src="Faultline-Screenshot-0.png" width="100%" /> | <img src="Faultline-Screenshot-1.png" width="100%" /> |
 
 ## 🚀 The Mission
 
@@ -85,6 +89,34 @@ This project is designed to run in a modern web environment (like Google AI Stud
    ```bash
    npm start
    ```
+
+## 🧑‍💻 Development
+
+- Install deps: `npm install`
+- Env: copy `.env.example` to `.env` and fill provider keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `CUSTOM_SEARCH_API_KEY`, `GOOGLE_CSE_ID`)
+- Dev server: `npm run dev`
+- Lint/format: `npm run lint` / `npm run format`
+- Tests: `npm run test -- --watch=false`
+- Optional backend proxy (keeps keys server-side): `npm run proxy:dev` (uses `server/proxy.ts`)
+- Performance modes: choose **Fast/Balanced/Full** in the UI to adjust max verifications, concurrency, retries, and timeouts. Fast runs fewer checks with shorter timeouts; Full is exhaustive.
+
+> Note: For production, run LLM and search calls through a backend proxy to avoid exposing API keys in the browser.
+
+## 🤝 Contributing
+- Read `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`.
+- Keep PRs focused; add tests for logic changes.
+- No secrets in commits; `.env` is ignored, `.env.example` is provided.
+
+## 🛣 Roadmap (short)
+- Backend proxy for provider/search calls (remove browser-key exposure)
+- Claim graph/weakest-chain visualization
+- Multimodal upload (PDF/image OCR) to claims pipeline
+- Deeper evidence: configurable search providers and citation snippets
+- Analytics/telemetry toggle for reliability (opt-in)
+- Performance modes: fast vs full autopsy (tune MAX_VERIFICATIONS, concurrency, timeouts)
+- Retry/backoff tuning and per-claim timeouts to reduce silent drops
+- Concurrency controls and batching to avoid provider throttling
+- Faster verification models/paths (lighter models, optional search) for snappier UX
 
 ## 🛡 Disclaimer
 
