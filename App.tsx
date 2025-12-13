@@ -1,10 +1,11 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { AnalysisState, VerificationResult } from './types';
 import { extractClaims, verifyClaim, generateCritiqueAndPrompt } from './services/geminiService';
 import { InputSection } from './components/InputSection';
 import { Dashboard } from './components/Dashboard';
-import { Info, X, Zap, ExternalLink, Github, Youtube, FileText } from 'lucide-react';
+import { Tour } from './components/Tour';
+import { Info, X, Zap, ExternalLink, Github, Youtube, FileText, PlayCircle } from 'lucide-react';
 
 // Safe environment variable access helper
 const getApiKey = (): string | undefined => {
@@ -20,6 +21,7 @@ type ViewMode = 'INPUT' | 'REPORT';
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('INPUT');
   const [showDemoInfo, setShowDemoInfo] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     claims: [],
     verifications: {},
@@ -28,6 +30,15 @@ function App() {
     step: 'idle',
     overallRisk: 'low'
   });
+
+  // Check for first-time visitor
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('faultline_has_seen_tour');
+    if (!hasSeenTour) {
+      setShowTour(true);
+      localStorage.setItem('faultline_has_seen_tour', 'true');
+    }
+  }, []);
 
   const handleReset = () => {
     setAnalysisState({
@@ -191,6 +202,16 @@ function App() {
         )}
       </main>
 
+      {/* Guided Tour Modal */}
+      <Tour 
+        isOpen={showTour} 
+        onClose={() => setShowTour(false)} 
+        onOpenLiveDemo={() => {
+            setShowTour(false);
+            setShowDemoInfo(true);
+        }}
+      />
+
       {/* Demo Info Modal */}
       {showDemoInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -212,6 +233,19 @@ function App() {
                             ⚡ This is a fully functional Live Demo built for the Gemini 3 Hackathon. Expect rapid iteration, not production polish.
                         </p>
                     </div>
+                </div>
+
+                <div className="mb-6">
+                    <button 
+                        onClick={() => {
+                            setShowDemoInfo(false);
+                            setShowTour(true);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 hover:text-white transition-all group"
+                    >
+                        <PlayCircle size={20} className="group-hover:scale-110 transition-transform" />
+                        <span className="font-bold">Start Guided Mission Briefing</span>
+                    </button>
                 </div>
 
                 <div className="space-y-3 bg-slate-950/50 rounded-xl p-4 border border-slate-800">
