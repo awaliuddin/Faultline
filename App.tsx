@@ -4,6 +4,7 @@ import type { AnalysisState, VerificationResult } from './types';
 import { extractClaims, verifyClaim, generateCritiqueAndPrompt } from './services/geminiService';
 import { InputSection } from './components/InputSection';
 import { Dashboard } from './components/Dashboard';
+import { Info, X, Zap, ExternalLink, Github, Youtube, FileText } from 'lucide-react';
 
 // Safe environment variable access helper
 const getApiKey = (): string | undefined => {
@@ -18,6 +19,7 @@ type ViewMode = 'INPUT' | 'REPORT';
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('INPUT');
+  const [showDemoInfo, setShowDemoInfo] = useState(false);
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     claims: [],
     verifications: {},
@@ -166,9 +168,19 @@ function App() {
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
       
       <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-none">
-        <div className="text-xl font-bold tracking-tighter text-slate-500 pointer-events-auto">
+        <div className="text-xl font-bold tracking-tighter text-slate-500 pointer-events-auto cursor-pointer select-none" onClick={handleReset}>
           Fault<span className="text-orange-500">line</span>
         </div>
+        
+        {/* Live Demo Button */}
+        <button 
+            onClick={() => setShowDemoInfo(true)}
+            className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/50 hover:bg-slate-700 hover:border-orange-500/30 transition-all text-sm text-slate-400 hover:text-orange-400 group cursor-pointer"
+            title="learn more"
+        >
+            <span>Live Demo</span>
+            <Info size={16} />
+        </button>
       </header>
 
       <main className="relative z-0">
@@ -178,6 +190,77 @@ function App() {
           <Dashboard state={analysisState} onReset={handleReset} />
         )}
       </main>
+
+      {/* Demo Info Modal */}
+      {showDemoInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full p-6 relative animate-in zoom-in-95 duration-200">
+                <button 
+                    onClick={() => setShowDemoInfo(false)}
+                    className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                >
+                    <X size={20} />
+                </button>
+                
+                <div className="flex items-start gap-4 mb-6">
+                    <div className="p-3 bg-orange-500/10 rounded-full border border-orange-500/20 flex-shrink-0">
+                        <Zap className="text-orange-500" size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-white">Hackathon Live Demo</h3>
+                        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+                            ⚡ This is a fully functional Live Demo built for the Gemini 3 Hackathon. Expect rapid iteration, not production polish.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-3 bg-slate-950/50 rounded-xl p-4 border border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Steal my work</h4>
+                    
+                    <a href="https://ai.studio/apps/drive/1zAf8IZnRT6w8kXJ42aTT0DUNhYhacjmT?fullscreenApplet=true" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between group p-3 hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                            <ExternalLink size={18} className="text-blue-400" />
+                            <span className="text-slate-300 text-sm font-medium group-hover:text-white">Project Link: Faultline</span>
+                        </div>
+                        <ExternalLink size={14} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    <a href="https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between group p-3 hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                            <FileText size={18} className="text-cyan-400" />
+                            <span className="text-slate-300 text-sm font-medium group-hover:text-white">Kaggle Writeup</span>
+                        </div>
+                        <ExternalLink size={14} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    <a href="https://youtu.be/9UTA2nIYmCM" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between group p-3 hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                            <Youtube size={18} className="text-red-500" />
+                            <span className="text-slate-300 text-sm font-medium group-hover:text-white">Video Demo: Faultline Demo</span>
+                        </div>
+                        <ExternalLink size={14} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    <a href="https://github.com/awaliuddin/Faultline" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between group p-3 hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                            <Github size={18} className="text-white" />
+                            <span className="text-slate-300 text-sm font-medium group-hover:text-white">GitHub Repo: Faultline Repo</span>
+                        </div>
+                        <ExternalLink size={14} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                </div>
+
+                 <div className="mt-6 flex justify-end">
+                    <button 
+                        onClick={() => setShowDemoInfo(false)}
+                        className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors border border-slate-700"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 }

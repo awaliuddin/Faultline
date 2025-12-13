@@ -1,5 +1,6 @@
+
 import React, { useState, useRef } from 'react';
-import { Upload, Search, Activity, Layers, AlertTriangle, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, Search, Activity, Layers, AlertTriangle, X, Image as ImageIcon, Code, Cpu, Trophy, ExternalLink } from 'lucide-react';
 
 interface InputSectionProps {
   onAnalyze: (text: string, image?: { data: string, mimeType: string }) => void;
@@ -9,6 +10,7 @@ interface InputSectionProps {
 export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcessing }) => {
   const [inputText, setInputText] = useState('');
   const [selectedFile, setSelectedFile] = useState<{ name: string, data: string, mimeType: string } | null>(null);
+  const [activeFeature, setActiveFeature] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -46,6 +48,98 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
       fileInputRef.current.value = '';
     }
   };
+
+  const features = [
+    {
+      id: 0,
+      icon: Layers,
+      color: "text-cyan-400",
+      borderColor: "group-hover:border-cyan-500/50",
+      hoverText: "group-hover:text-cyan-400",
+      title: "Maps Information Plates",
+      modalTitle: "Structural Decomposition",
+      modalSubtitle: "Powered by Gemini 3 Pro Reasoning",
+      content: (
+        <div className="space-y-4 text-slate-300">
+            <p>
+                LLMs are convincing because they are fluent. <strong>Faultline</strong> disrupts that fluency.
+            </p>
+            <p>
+                We use Gemini 3's advanced reasoning capabilities to strip away rhetoric and isolate <strong>"Atomic Claims"</strong>. By requesting a strict JSON schema, we force the model to categorize every sentence as a <em>Fact</em> (Testable), <em>Opinion</em> (Subjective), or <em>Interpretation</em>.
+            </p>
+            <div className="bg-cyan-950/30 p-4 rounded-lg border border-cyan-500/20 text-sm mt-4">
+                <div className="flex items-center gap-2 mb-2 text-cyan-400 font-bold">
+                    <Code size={16} />
+                    <span>Dev Lesson: Schema is Strategy</span>
+                </div>
+                Don't just ask for text. Use Gemini's <code>responseSchema</code> to enforce structural thinking. It turns a creative writer into a data parser.
+            </div>
+            <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs text-slate-500 hover:text-cyan-400 transition-colors mt-2">
+                <ExternalLink size={12} />
+                Try JSON Mode in Google AI Studio
+            </a>
+        </div>
+      )
+    },
+    {
+      id: 1,
+      icon: Search,
+      color: "text-emerald-400",
+      borderColor: "group-hover:border-emerald-500/50",
+      hoverText: "group-hover:text-emerald-400",
+      title: "Stress-Tests Claims",
+      modalTitle: "Adversarial Verification",
+      modalSubtitle: "Powered by Google Search Grounding",
+      content: (
+        <div className="space-y-4 text-slate-300">
+            <p>
+                Hallucinations happen when models are confident but wrong. To catch them, we must introduce <strong>Friction</strong>.
+            </p>
+            <p>
+                Faultline isolates "Load-Bearing Facts" (high importance claims) and uses the <strong>Gemini API's native <code>googleSearch</code> tool</strong> to run live verification queries. If the search results don't align with the claim, we flag it as a fracture.
+            </p>
+            <div className="bg-emerald-950/30 p-4 rounded-lg border border-emerald-500/20 text-sm mt-4">
+                <div className="flex items-center gap-2 mb-2 text-emerald-400 font-bold">
+                    <Cpu size={16} />
+                    <span>Dev Lesson: Grounding</span>
+                </div>
+                For enterprise applications, reasoning without grounding is dangerous. Always connect your model to the world using Tools.
+            </div>
+        </div>
+      )
+    },
+    {
+      id: 2,
+      icon: AlertTriangle,
+      color: "text-red-400",
+      borderColor: "group-hover:border-red-500/50",
+      hoverText: "group-hover:text-red-400",
+      title: "Locates Fault Lines",
+      modalTitle: "Seismic Risk Assessment",
+      modalSubtitle: "Join the Kaggle Competition",
+      content: (
+        <div className="space-y-4 text-slate-300">
+            <p>
+                Not all errors are equal. A wrong date is a crack; a wrong conclusion is a collapse.
+            </p>
+            <p>
+                We calculate a <strong>Stability Score</strong> based strictly on verified facts, ignoring subjective fluff. This is the kind of "System 2" thinking that Gemini 3 excels at—analyzing its own output for logical consistency.
+            </p>
+            <div className="bg-red-950/30 p-4 rounded-lg border border-red-500/20 text-sm mt-4">
+                <div className="flex items-center gap-2 mb-2 text-red-400 font-bold">
+                    <Trophy size={16} />
+                    <span>Steal this Idea</span>
+                </div>
+                We built this for the Gemini 3 Kaggle Competition. The tools are free to try. What will you build?
+            </div>
+            <a href="https://www.kaggle.com/competitions/gemini-3" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs text-slate-500 hover:text-red-400 transition-colors mt-2">
+                <ExternalLink size={12} />
+                View the Competition on Kaggle
+            </a>
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[80vh]">
@@ -128,20 +222,86 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
         </form>
       </div>
       
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-slate-500 text-sm font-medium">
-        <div className="flex flex-col items-center space-y-2 group">
-            <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-full text-slate-400 group-hover:text-cyan-400 group-hover:border-cyan-500/50 transition-all duration-300"><Layers size={20} /></div>
-            <span>Maps Information Plates</span>
-        </div>
-        <div className="flex flex-col items-center space-y-2 group">
-            <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-full text-slate-400 group-hover:text-emerald-400 group-hover:border-emerald-500/50 transition-all duration-300"><Search size={20} /></div>
-            <span>Stress-Tests Claims</span>
-        </div>
-        <div className="flex flex-col items-center space-y-2 group">
-            <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-full text-slate-400 group-hover:text-red-400 group-hover:border-red-500/50 transition-all duration-300"><AlertTriangle size={20} /></div>
-            <span>Locates Fault Lines</span>
-        </div>
+      {/* Interactive Feature Icons */}
+      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-slate-500 text-sm font-medium w-full max-w-3xl">
+        {features.map((feature, idx) => {
+            const Icon = feature.icon;
+            return (
+                <button 
+                    key={idx}
+                    onClick={() => setActiveFeature(feature.id)}
+                    className="flex flex-col items-center space-y-3 group focus:outline-none"
+                >
+                    <div className={`p-4 bg-slate-800/50 border border-slate-700 rounded-full text-slate-400 transition-all duration-300 transform group-hover:scale-110 group-hover:shadow-lg ${feature.borderColor} ${feature.hoverText}`}>
+                        <Icon size={24} />
+                    </div>
+                    <div className="flex items-center gap-1 group-hover:text-slate-300 transition-colors">
+                        <span>{feature.title}</span>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
+                            <ExternalLink size={10} />
+                        </div>
+                    </div>
+                </button>
+            );
+        })}
       </div>
+
+      {/* Feature Details Modal */}
+      {activeFeature !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setActiveFeature(null)}>
+            <div 
+                className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full p-0 relative animate-in zoom-in-95 duration-200 overflow-hidden" 
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header with Color Accent */}
+                <div className={`h-2 w-full bg-gradient-to-r ${
+                    activeFeature === 0 ? 'from-cyan-500 to-blue-600' : 
+                    activeFeature === 1 ? 'from-emerald-500 to-green-600' : 
+                    'from-red-500 to-orange-600'
+                }`} />
+                
+                <div className="p-8">
+                    <button 
+                        onClick={() => setActiveFeature(null)}
+                        className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors bg-slate-800/50 p-1 rounded-full hover:bg-slate-800"
+                    >
+                        <X size={20} />
+                    </button>
+
+                    <div className="flex items-start gap-4 mb-6">
+                        <div className={`p-3 rounded-xl border bg-opacity-10 ${
+                             activeFeature === 0 ? 'bg-cyan-500 border-cyan-500/30 text-cyan-400' : 
+                             activeFeature === 1 ? 'bg-emerald-500 border-emerald-500/30 text-emerald-400' : 
+                             'bg-red-500 border-red-500/30 text-red-400'
+                        }`}>
+                            {React.createElement(features[activeFeature].icon, { size: 32 })}
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-bold text-white tracking-tight">{features[activeFeature].modalTitle}</h3>
+                            <p className={`text-sm font-medium uppercase tracking-wider mt-1 ${features[activeFeature].color}`}>
+                                {features[activeFeature].modalSubtitle}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="prose prose-invert prose-sm">
+                        {features[activeFeature].content}
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center">
+                         <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Tech Spec // Gemini 3</span>
+                         <button 
+                            onClick={() => setActiveFeature(null)}
+                            className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                         >
+                            Close Details
+                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };
