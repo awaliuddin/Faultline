@@ -2,7 +2,11 @@
 
 **Faultline** is a seismic stress-test for AI answers. Instead of just generating more text, Faultline maps the geological structure of an argument, stress-tests atomic claims against real-world data using Gemini 3 Pro, and detects the logical fault lines where the answer is likely to collapse.
 
-<img src="https://via.placeholder.com/800x400/0f172a/f97316?text=Faultline+Seismic+Survey" alt="Faultline App Preview" width="100%" />
+### 🧭 Faultline UI Flow
+
+| Guided Tour | → | Load Artifact | → | Stress-Test | → | Final Report |
+|-------------|---|---------------|---|-------------|---|--------------|
+| <img src="assets/1-guided-tour.png" width="110px" /> |   | <img src="assets/2-main-screen.png" width="200px" /> |   | <img src="assets/3-stress-test-screen-1.png" width="200px" /> |   | <img src="assets/4-stress-test-screen-2.png" width="200px" /> |
 
 ## 🚀 The Mission
 
@@ -80,4 +84,17 @@ Faultline is a tool for **augmenting human judgment**, not replacing it. While i
 
 ---
 
-*Built with ❤️ using NextGen AI - Intelligent Systems (nxtg.ai)*
+Here’s a clean, GitHub-friendly Markdown card you can drop into your README to match the “STEAL MY WORK” vibe—complete with icons, labels, and links:
+
+---
+
+## ⚡ In Partnership with Kaggle and Google DeepMind
+### 🚀 STEAL MY WORK
+
+| 🔗 Project | 📄 Kaggle Writeup | 🎥 Video Demo | 💻 GitHub Repo |
+|-----------|-------------------|---------------|----------------|
+| [Faultline App](https://ai.studio/apps/drive/1zAf8IZnRT6w8kXJ42aTT0DUNhYhacjmT) | [Kaggle Writeup](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina) | [Faultline Demo](https://youtu.be/9UTA2nIYmCM?si=3StkFNDg-OnTPYEX) | [Faultline Repo](https://github.com/awaliuddin/faultline) |
+
+
+---
+*Built with ❤️ using [Google AI Studio](https://aistudio.google.com/)*
