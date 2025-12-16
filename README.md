@@ -1,3 +1,17 @@
+# Faultline: Seismic Stress-Testing for AI Hallucinations
+
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5%20Pro-4285F4.svg)](https://ai.google.dev/)
+[![License](https://img.shields.io/badge/license-CC%20BY%204.0-green.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![GitHub stars](https://img.shields.io/github/stars/awaliuddin/Faultline?style=social)](https://github.com/awaliuddin/Faultline/stargazers)
+[![Kaggle](https://img.shields.io/badge/Kaggle-Competition-20BEFF.svg)](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina)
+
+> **Structural engineering for the generative age.** Treat AI hallucinations like building code violations—test the foundations, identify fractures, and reinforce the integrity.
+
+[🚀 Try Live Demo](https://ai.studio/apps/drive/1zAf8IZnRT6w8kXJ42aTT0DUNhYhacjmT) | [📺 Watch Video](https://youtu.be/9UTA2nIYmCM) | [📄 Read Writeup](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina)
+
+---
+
 # Faultline: Expose where your AI’s reasoning will crack under pressure.
 
 **Faultline** is a seismic stress-test for AI answers. Instead of just generating more text, Faultline maps the geological structure of an argument, stress-tests atomic claims against real-world data using Gemini 3 Pro, and detects the logical fault lines where the answer is likely to collapse.
@@ -98,3 +112,49 @@ Here’s a clean, GitHub-friendly Markdown card you can drop into your README to
 
 ---
 *Built with ❤️ using [Google AI Studio](https://aistudio.google.com/)*
+
+---
+
+## 🤝 Contributing
+
+We're actively looking for contributors to expand Faultline's capabilities:
+
+### Priority Areas
+- **Multi-language support**: Extend claim extraction beyond English
+- **Custom grounding sources**: Integrate academic databases, enterprise knowledge bases
+- **Batch processing API**: Large-scale hallucination audits for content pipelines
+- **Benchmarking**: Comparative analysis vs. other fact-checking tools
+- **Visualization improvements**: Enhanced Seismic Barometer UI/UX
+
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Check out our [Issues](https://github.com/awaliuddin/Faultline/issues) page for "good first issue" labels!
+
+---
+
+## 👥 Community & Support
+
+- **Discussions**: Join conversations on [GitHub Discussions](https://github.com/awaliuddin/Faultline/discussions)
+- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/awaliuddin/Faultline/issues)
+- **Kaggle**: Technical deep-dive in the [competition writeup](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina)
+
+### Citation
+If you use Faultline in your research or project:
+```bibtex
+@misc{faultline2025,
+  author = {Waliuddin, Asif},
+  title = {Faultline: Seismic Stress-Testing for AI Hallucinations},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/awaliuddin/Faultline}
+}
+```
+
+---
+
+**Built with ❤️ by [NextGen AI](https://nxtg.ai)** | **Powered by [Google AI Studio](https://aistudio.google.com/)**
