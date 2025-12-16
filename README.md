@@ -1,10 +1,12 @@
 # Faultline: Seismic Stress-Testing for AI Hallucinations
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Gemini](https://img.shields.io/badge/Gemini-2.5%20Pro-4285F4.svg)](https://ai.google.dev/)
+[![Gemini](https://img.shields.io/badge/Gemini-3%20Pro-886FBF.svg?logo=googlegemini&logoColor=ffffff)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/license-CC%20BY%204.0-green.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![GitHub stars](https://img.shields.io/github/stars/awaliuddin/Faultline?style=social)](https://github.com/awaliuddin/Faultline/stargazers)
 [![Kaggle](https://img.shields.io/badge/Kaggle-Competition-20BEFF.svg)](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina)
+[![AI Studio](https://img.shields.io/badge/AI%20Studio-Platform-4285F4.svg)](https://ai.google.dev/)
+[![NextGen AI](https://img.shields.io/badge/NextGen%20AI-nxtg.ai-111827.svg)](https://nxtg.ai)
 
 > **Structural engineering for the generative age.** Treat AI hallucinations like building code violations—test the foundations, identify fractures, and reinforce the integrity.
 
