@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { LLMProvider, ImageInput, CritiqueResult, ProviderFactory } from '../providers/base_provider';
 import type { Claim } from '../types';
 
@@ -20,8 +20,16 @@ function mockAnthropicResponse(text: string, status = 200) {
 }
 
 describe('ClaudeProvider', () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env = { ...originalEnv };
+    delete process.env.FAULTLINE_CLAUDE_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
   });
 
   describe('interface compliance', () => {
@@ -215,6 +223,331 @@ describe('ClaudeProvider', () => {
 
       expect(result.critique).toBe('Analysis incomplete.');
       expect(result.improvedPrompt).toContain('Verify facts');
+    });
+
+    it('should truncate long original text to 500 chars', async () => {
+      const longText = 'A'.repeat(1000);
+      const mockResult = { critique: 'Assessment.', improvedPrompt: 'Prompt.' };
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(JSON.stringify(mockResult)));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.generateCritiqueAndPrompt(longText, [
+        { id: 'c1', text: 'Claim', type: 'fact', importance: 5 },
+      ]);
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const messageText = body.messages[0].content[0].text;
+      expect(messageText).not.toContain('A'.repeat(501));
+    });
+
+    it('should include failed claims in the prompt', async () => {
+      const mockResult = { critique: 'Bad.', improvedPrompt: 'Fix.' };
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(JSON.stringify(mockResult)));
+
+      const provider = createClaudeProvider('test-key');
+      const claims: Claim[] = [
+        { id: 'c1', text: 'Claim one is wrong', type: 'fact', importance: 5 },
+        { id: 'c2', text: 'Claim two is wrong', type: 'fact', importance: 4 },
+      ];
+      await provider.generateCritiqueAndPrompt('original', claims);
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const messageText = body.messages[0].content[0].text;
+      expect(messageText).toContain('Claim one is wrong');
+      expect(messageText).toContain('Claim two is wrong');
+    });
+
+    it('should handle markdown-wrapped JSON in critique response', async () => {
+      const mockResult = { critique: 'Issues found.', improvedPrompt: 'Be more specific.' };
+      const wrapped = '```json\n' + JSON.stringify(mockResult) + '\n```';
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(wrapped));
+
+      const provider = createClaudeProvider('test-key');
+      const result = await provider.generateCritiqueAndPrompt('text', [
+        { id: 'c1', text: 'Bad', type: 'fact', importance: 5 },
+      ]);
+
+      expect(result.critique).toBe('Issues found.');
+      expect(result.improvedPrompt).toBe('Be more specific.');
+    });
+  });
+
+  describe('FAULTLINE_CLAUDE_MODEL env var', () => {
+    it('should use default model when env var is not set', () => {
+      const provider = createClaudeProvider('test-key');
+      expect(provider.modelId).toBe('claude-sonnet-4-20250514');
+    });
+
+    it('should use custom model from FAULTLINE_CLAUDE_MODEL', () => {
+      process.env.FAULTLINE_CLAUDE_MODEL = 'claude-opus-4-20250514';
+      const provider = createClaudeProvider('test-key');
+      expect(provider.modelId).toBe('claude-opus-4-20250514');
+    });
+
+    it('should send custom model in API request body', async () => {
+      process.env.FAULTLINE_CLAUDE_MODEL = 'claude-haiku-3-20250307';
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.model).toBe('claude-haiku-3-20250307');
+    });
+
+    it('should fall back to default when env var is empty string', () => {
+      process.env.FAULTLINE_CLAUDE_MODEL = '';
+      const provider = createClaudeProvider('test-key');
+      expect(provider.modelId).toBe('claude-sonnet-4-20250514');
+    });
+
+    it('different instances can have different models if env changes between constructions', () => {
+      const p1 = createClaudeProvider('key-1');
+      process.env.FAULTLINE_CLAUDE_MODEL = 'claude-opus-4-20250514';
+      const p2 = createClaudeProvider('key-2');
+      expect(p1.modelId).toBe('claude-sonnet-4-20250514');
+      expect(p2.modelId).toBe('claude-opus-4-20250514');
+    });
+  });
+
+  describe('API call structure', () => {
+    it('should use POST method', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      expect(mockFetch.mock.calls[0][1].method).toBe('POST');
+    });
+
+    it('should use correct API endpoint', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://api.anthropic.com/v1/messages');
+    });
+
+    it('should include model in request body', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.model).toBe('claude-sonnet-4-20250514');
+    });
+
+    it('should set max_tokens in request body', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.max_tokens).toBe(4096);
+    });
+
+    it('should include anthropic-version header', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      const options = mockFetch.mock.calls[0][1];
+      expect(options.headers['anthropic-version']).toBe('2023-06-01');
+    });
+
+    it('should include Content-Type header', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      await provider.extractClaims('Test');
+
+      const options = mockFetch.mock.calls[0][1];
+      expect(options.headers['Content-Type']).toBe('application/json');
+    });
+
+    it('should handle empty content array in response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ content: [] }),
+      });
+
+      const provider = createClaudeProvider('test-key');
+      const result = await provider.extractClaims('Some text');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle missing content in response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({}),
+      });
+
+      const provider = createClaudeProvider('test-key');
+      const result = await provider.extractClaims('Some text');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('extractJson edge cases', () => {
+    it('should handle JSON with surrounding prose', async () => {
+      const claims = [{ id: 'c1', text: 'Claim', type: 'fact', importance: 5 }];
+      const withProse = 'Here are the claims:\n' + JSON.stringify(claims) + '\nEnd.';
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(withProse));
+
+      const provider = createClaudeProvider('test-key');
+      const result = await provider.extractClaims('Input');
+      expect(result).toEqual(claims);
+    });
+
+    it('should handle JSON object with surrounding prose', async () => {
+      const obj = { status: 'supported', explanation: 'Good.' };
+      const withProse = 'Result: ' + JSON.stringify(obj) + ' Done.';
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(withProse));
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c1', text: 'Test', type: 'fact', importance: 5 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.status).toBe('supported');
+    });
+
+    it('should return empty array for completely empty response', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(''));
+
+      const provider = createClaudeProvider('test-key');
+      const result = await provider.extractClaims('Input');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle response with only whitespace', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('   \n\n  '));
+
+      const provider = createClaudeProvider('test-key');
+      const result = await provider.extractClaims('Input');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('verifyClaim additional cases', () => {
+    it('should handle mixed status', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockAnthropicResponse(
+          JSON.stringify({ status: 'mixed', explanation: 'Partially true.' }),
+        ),
+      );
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c5', text: 'Partial claim', type: 'fact', importance: 3 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.status).toBe('mixed');
+      expect(result.explanation).toBe('Partially true.');
+    });
+
+    it('should default to unverified when status is missing', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockAnthropicResponse(JSON.stringify({ explanation: 'No status field.' })),
+      );
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c6', text: 'Claim', type: 'fact', importance: 2 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.status).toBe('unverified');
+    });
+
+    it('should provide default explanation when missing', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockAnthropicResponse(JSON.stringify({ status: 'supported' })),
+      );
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c7', text: 'Claim', type: 'fact', importance: 3 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.explanation).toBe('No structural analysis provided.');
+    });
+
+    it('should always return empty sources array', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockAnthropicResponse(
+          JSON.stringify({ status: 'supported', explanation: 'Good.' }),
+        ),
+      );
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c8', text: 'Claim', type: 'fact', importance: 3 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.sources).toEqual([]);
+    });
+
+    it('should handle 500 server error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c9', text: 'Claim', type: 'fact', importance: 3 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.status).toBe('unverified');
+    });
+
+    it('should handle 401 unauthorized error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+      });
+
+      const provider = createClaudeProvider('test-key');
+      const claim: Claim = { id: 'c10', text: 'Claim', type: 'fact', importance: 3 };
+      const result = await provider.verifyClaim(claim);
+      expect(result.status).toBe('unverified');
+    });
+  });
+
+  describe('extractClaims with image', () => {
+    it('should set correct media_type from image input', async () => {
+      const claims = [{ id: 'c1', text: 'Image claim', type: 'fact', importance: 3 }];
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(JSON.stringify(claims)));
+
+      const provider = createClaudeProvider('test-key');
+      const image: ImageInput = { data: 'base64jpeg', mimeType: 'image/jpeg' };
+      await provider.extractClaims('caption', image);
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.messages[0].content[0].source.media_type).toBe('image/jpeg');
+      expect(body.messages[0].content[0].source.type).toBe('base64');
+    });
+
+    it('should include both image and text content blocks', async () => {
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse('[]'));
+
+      const provider = createClaudeProvider('test-key');
+      const image: ImageInput = { data: 'data', mimeType: 'image/png' };
+      await provider.extractClaims('Some caption', image);
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.messages[0].content).toHaveLength(2);
+      expect(body.messages[0].content[0].type).toBe('image');
+      expect(body.messages[0].content[1].type).toBe('text');
+    });
+
+    it('should handle image-only input (no text)', async () => {
+      const claims = [{ id: 'c1', text: 'Visual claim', type: 'fact', importance: 4 }];
+      mockFetch.mockResolvedValueOnce(mockAnthropicResponse(JSON.stringify(claims)));
+
+      const provider = createClaudeProvider('test-key');
+      const image: ImageInput = { data: 'imgdata', mimeType: 'image/webp' };
+      const result = await provider.extractClaims('', image);
+      expect(result).toEqual(claims);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 });

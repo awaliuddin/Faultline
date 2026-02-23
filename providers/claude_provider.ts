@@ -7,13 +7,16 @@ import type { LLMProvider, ImageInput, CritiqueResult, ProviderFactory } from '.
  * Uses the Anthropic Messages API to perform claim extraction, verification,
  * and critique generation. Designed to be a drop-in alternative to GeminiProvider.
  */
+const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+
 class ClaudeProvider implements LLMProvider {
   readonly name = 'Anthropic Claude';
-  readonly modelId = 'claude-sonnet-4-20250514';
+  readonly modelId: string;
   private apiKey: string;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
+    this.modelId = (typeof process !== 'undefined' ? process.env?.FAULTLINE_CLAUDE_MODEL : undefined) || DEFAULT_MODEL;
   }
 
   async extractClaims(text: string, image?: ImageInput): Promise<Claim[]> {
