@@ -13,3 +13,13 @@ export {
   type TriggeredArticle,
   generateComplianceReport,
 } from './report_generator';
+
+export {
+  type CalibrationProfile,
+  type MappingCurve,
+  calibrate,
+  getProfile,
+  registerProfile,
+  unregisterProfile,
+  listProfiles,
+} from './calibration';

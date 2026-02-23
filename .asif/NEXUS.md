@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 473 tests, jsdom + @testing-library/react)
+- Vitest (testing, 505 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-23 | Confidence score calibration: per-provider normalization to 0-100, linear/logarithmic curves, profile registry. 505 tests, 21 files. |
 | 2026-02-23 | Multi-provider abstraction: formalized MockProvider, eliminated scan.ts special-case, mock registered in registry. 473 tests, 20 files. |
 | 2026-02-23 | Severity-based exit codes (--fail-on flag) for CI pipeline integration. 453 tests, 19 files. |
 | 2026-02-23 | GitHub Action for CI/CD integration (composite action, threshold gate, SARIF upload, example workflow). 445 tests, 19 files. |
@@ -1170,3 +1171,47 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - Registry integration (8): listed in providers, getProvider returns mock, default stays gemini, env var fallback, explicit overrides env, no API key needed, seamless switching between all 3 providers, fallback to mock when others would fail
 >
 > **6. Full suite: 473 tests, 20 files, 0 failures, 1.28s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-10 — Confidence Score Calibration
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 07:00 | **Estimate**: M | **Status**: COMPLETED
+
+> **Context**: Multi-provider support (R26) means different LLMs return different confidence scales. Calibration normalizes scores to 0-100 range across providers for consistent severity assessment.
+
+**Action Items**:
+1. [x] Add confidence calibration module — normalize raw provider scores to 0-100 scale
+2. [x] Per-provider calibration config — each provider can specify min/max raw score range and mapping curve (linear/logarithmic)
+3. [x] Default calibration profiles for mock, gemini providers (add more as providers added)
+4. [x] Tests for calibration normalization, edge cases (0, 100, out-of-range), per-provider profiles — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> **1. `compliance/calibration.ts` — calibration module**:
+> - `calibrate(rawScore, providerName)` → integer 0-100: clamps to provider's raw range, applies mapping curve, rounds
+> - Input clamping: values below `rawMin` → 0, above `rawMax` → 100
+> - Unknown providers fall back to linear 0-1 identity mapping (graceful degradation)
+>
+> **2. Per-provider calibration config**:
+> - `CalibrationProfile` interface: `provider`, `rawMin`, `rawMax`, `curve` (`'linear'` | `'logarithmic'`)
+> - Linear: straight proportional mapping `(raw - min) / (max - min) * 100`
+> - Logarithmic: `log1p(normalized * 9) / log(10) * 100` — amplifies low-range differences (small raw scores near 0 produce meaningful distinctions)
+> - `registerProfile()` / `unregisterProfile()` for runtime custom profiles
+> - `getProfile()` / `listProfiles()` for discovery
+>
+> **3. Default profiles**:
+> - `mock`: rawMin=0, rawMax=1, curve=linear (deterministic, predictable for testing)
+> - `gemini`: rawMin=0, rawMax=1, curve=logarithmic (amplifies low-confidence signals from Gemini)
+> - `claude`: rawMin=0, rawMax=1, curve=logarithmic (same scale as Gemini but can be overridden independently)
+>
+> **4. `compliance/index.ts`** — barrel export updated with all calibration exports
+>
+> **5. Tests — 32 new in `tests/calibration.test.ts`**:
+> - Linear mapping (5): 0→0, 1→100, 0.5→50, 0.25→25, 0.75→75
+> - Logarithmic mapping (5): 0→0, 1→100, low-range amplification, high-range compression, midpoint above linear
+> - Edge cases (6): negative clamped, above-max clamped, exact 0, exact 100, integer output, unknown provider fallback
+> - Out-of-range (4): -100→0, 999→100, -0.001→0, 1.001→100
+> - Built-in profiles (5): mock exists, gemini exists, claude exists, unknown undefined, list all
+> - Custom profiles (7): register, calibrate with custom range, clamp to custom range, unregister, override built-in, equal min/max edge case, logarithmic custom
+>
+> **6. Full suite: 505 tests, 21 files, 0 failures, 1.23s.** Typecheck clean. Zero regressions.
