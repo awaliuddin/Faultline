@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 164 tests, jsdom + @testing-library/react)
+- Vitest (testing, 176 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | Multi-provider pipeline integration tests (Gemini/Claude/mock OpenAI). Tests expanded to 176 across 11 files. |
 | 2026-02-22 | Public README rewrite + docs/ARCHITECTURE.md. |
 | 2026-02-22 | Full pipeline + multi-provider integration tests. Tests expanded to 164 across 10 files. |
 | 2026-02-22 | EU AI Act compliance module (risk mapping + report generator). Tests expanded to 151 across 8 files. |
@@ -526,3 +527,27 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - Test architecture overview
 >
 > **3. Tests: 164 passing, 10 files, 643ms.** No changes to test files.
+
+### DIRECTIVE-NXTG-20260222-08 — Multi-Provider Pipeline Test
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-22 22:20 | **Estimate**: M | **Status**: COMPLETED
+
+**Action Items**:
+1. [ ] Create `tests/test_pipeline_integration.py` — end-to-end test that runs a sample prompt through the full pipeline (load → classify → validate → report) using mock providers
+2. [ ] Test provider switching: verify pipeline works with Claude mock, Gemini mock, and OpenAI mock interchangeably
+3. [ ] Test error propagation: provider failure → graceful pipeline error → structured error report
+4. [ ] All tests passing, zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> Note: Directive referenced `.py` and OpenAI — adapted to TypeScript (project language) and created a mock OpenAI provider to prove registry extensibility without adding a real SDK dependency.
+>
+> **1. `tests/integration/pipeline-providers.test.ts` — 12 tests**:
+> - Full pipeline per provider (3): Gemini, Claude, and mock OpenAI each run extract → filter → verify → risk → EU map → report with distinct verification outcomes
+> - Provider switching (3): same input through all 3 providers produces valid reports; env var switches provider; runtime-registered provider integrates with full pipeline
+> - Error propagation (6): Gemini/Claude extraction failure → empty report; Gemini/Claude verification failure → unverified + domain-aware EU mapping; partial failure → mixed report; unknown provider → structured error
+>
+> **2. Mock OpenAI provider**: Inline `LLMProvider` implementation registered via `registerProvider('openai', ...)`. Returns deterministic claims/verifications. Proves the registry pattern works with any third-party provider.
+>
+> **3. Full suite: 176 tests, 11 files, 0 failures, 657ms.** All API calls mocked.
