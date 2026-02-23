@@ -17,6 +17,7 @@ import { loadConfig, mergeFlags, generateSampleConfig } from './config.js';
 import { startWatch } from './watch.js';
 import { getAllTemplates, getTemplatesByCategories, listCategories, validateCategories, type TemplateCategory } from '../templates/index.js';
 import { checkThreshold, countFromScanResult, type SeverityLevel } from './action.js';
+import { aggregate, renderAggregatedReport, type AggregateOutputFormat } from './aggregate.js';
 
 const VERSION = '0.1.0';
 
@@ -26,6 +27,7 @@ function usage(): string {
 Usage:
   faultline scan --input <file> [--provider gemini|claude|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii,bias,toxicity] [--fail-on critical|high|medium|low]
   faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii] [--fail-on high]
+  faultline aggregate --dir <path> [--output-format json|markdown|html|sarif]  Aggregate scan results
   faultline report --input <results.json> [--output-format json|markdown|html|sarif]
   faultline watch --dir <path> [--provider mock] [--output-format json]   Watch for changes
   faultline scan --templates injection,bias                         Red-team scan with template categories
@@ -142,6 +144,62 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       });
 
       return { exitCode: 0, output: `Watching ${resolvedDir} for changes... (Ctrl+C to stop)` };
+    }
+
+    case 'aggregate': {
+      const aggDir = flags['dir'];
+      if (!aggDir) {
+        return { exitCode: 1, output: 'Error: --dir <path> is required for aggregate.\n\n' + usage() };
+      }
+
+      const resolvedAggDir = resolve(aggDir);
+      if (!existsSync(resolvedAggDir)) {
+        return { exitCode: 1, output: `Error: Directory not found: ${resolvedAggDir}` };
+      }
+      try {
+        if (!statSync(resolvedAggDir).isDirectory()) {
+          return { exitCode: 1, output: `Error: Not a directory: ${resolvedAggDir}` };
+        }
+      } catch {
+        return { exitCode: 1, output: `Error: Cannot read: ${resolvedAggDir}` };
+      }
+
+      const aggFormat = (flags['output-format'] || 'json') as AggregateOutputFormat;
+      if (!['json', 'markdown', 'html', 'sarif'].includes(aggFormat)) {
+        return { exitCode: 1, output: 'Error: --output-format must be json, markdown, html, or sarif.' };
+      }
+
+      // Read all JSON files from directory
+      const { readdirSync } = await import('node:fs');
+      const jsonFiles = readdirSync(resolvedAggDir)
+        .filter((f: string) => f.endsWith('.json'))
+        .sort();
+
+      if (jsonFiles.length === 0) {
+        return { exitCode: 1, output: `Error: No JSON files found in ${resolvedAggDir}.` };
+      }
+
+      const fileResults: Array<{ file: string; result: import('./scan.js').ScanResult }> = [];
+      for (const jsonFile of jsonFiles) {
+        try {
+          const content = readFileSync(resolve(resolvedAggDir, jsonFile), 'utf-8');
+          const parsed = JSON.parse(content);
+          // Basic shape validation: must have claims and verifications
+          if (parsed && parsed.claims && parsed.verifications && parsed.complianceReport) {
+            fileResults.push({ file: jsonFile, result: parsed });
+          }
+        } catch {
+          // Skip invalid JSON files
+        }
+      }
+
+      if (fileResults.length === 0) {
+        return { exitCode: 1, output: `Error: No valid scan result files found in ${resolvedAggDir}.` };
+      }
+
+      const aggregated = aggregate(fileResults);
+      const aggOutput = renderAggregatedReport(aggregated, aggFormat);
+      return { exitCode: 0, output: aggOutput };
     }
 
     case 'scan': {

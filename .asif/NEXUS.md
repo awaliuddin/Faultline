@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 505 tests, jsdom + @testing-library/react)
+- Vitest (testing, 547 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-23 | Report aggregation: multi-file summary, risk heatmap, 4 output formats, faultline aggregate CLI. 547 tests, 22 files. |
 | 2026-02-23 | Confidence score calibration: per-provider normalization to 0-100, linear/logarithmic curves, profile registry. 505 tests, 21 files. |
 | 2026-02-23 | Multi-provider abstraction: formalized MockProvider, eliminated scan.ts special-case, mock registered in registry. 473 tests, 20 files. |
 | 2026-02-23 | Severity-based exit codes (--fail-on flag) for CI pipeline integration. 453 tests, 19 files. |
@@ -1171,6 +1172,59 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - Registry integration (8): listed in providers, getProvider returns mock, default stays gemini, env var fallback, explicit overrides env, no API key needed, seamless switching between all 3 providers, fallback to mock when others would fail
 >
 > **6. Full suite: 473 tests, 20 files, 0 failures, 1.28s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-11 — Report Aggregation + Multi-File Summary
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 09:30 | **Estimate**: M | **Status**: COMPLETED
+
+> **Context**: Stream B: EU AI Act compliance requires portfolio-level reporting. Enterprises scan hundreds of files — they need a single aggregated report, not per-file JSON dumps. This bridges the gap between `--dir` scanning and enterprise compliance reporting.
+
+**Action Items**:
+1. [x] Create `cli/aggregate.ts` — takes multiple scan results (from `--dir` or individual scans) and produces a consolidated report
+   - Total findings across all files
+   - Highest severity per category
+   - EU AI Act article coverage (which articles triggered across the entire scan)
+   - Risk heatmap: which files have the most findings
+2. [x] `faultline aggregate --dir ./results/` CLI command — reads JSON scan results from directory
+3. [x] Support all output formats: JSON, markdown, HTML, SARIF (aggregated SARIF with multiple runs)
+4. [x] Tests for aggregation logic, multi-file summary, empty/single/many file cases — zero regressions. Commit and push.
+
+**Constraints**:
+- Reuse existing rendering infrastructure from cli/report.ts
+- Aggregation is post-processing — does NOT re-scan files
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> **1. `cli/aggregate.ts` — aggregation module**:
+> - `aggregate(fileResults)` → `AggregatedReport`: takes array of `{ file, result: ScanResult }`, produces consolidated report
+> - **Total findings**: sums rule findings + non-supported verifications across all files
+> - **Highest severity**: tracks highest overall risk and EU tier across all files
+> - **EU AI Act article coverage**: deduplicates triggered articles, merges claim IDs across files
+> - **Risk heatmap**: per-file finding count + risk/tier, sorted by findings descending
+> - **Rule finding summary**: total + by severity (critical/high/medium/low/info)
+> - **Confidence distribution**: summed across files
+> - **Mitigations**: deduplicated set from all files
+>
+> **2. `faultline aggregate --dir ./results/` CLI command**:
+> - Reads all `.json` files from directory, validates shape (must have `claims`, `verifications`, `complianceReport`)
+> - Skips invalid/non-scan JSON files gracefully
+> - Error handling: missing dir, not a directory, no JSON files, no valid scan results
+> - `--output-format json|markdown|html|sarif` with validation
+>
+> **3. All 4 output formats**:
+> - **JSON**: full `AggregatedReport` object
+> - **Markdown**: h1 title, metadata table, EU risk summary, confidence distribution, rule findings summary, risk heatmap table, triggered articles, mitigations, footer
+> - **HTML**: standalone document with embedded CSS, summary cards grid, all tables, badges, footer
+> - **SARIF 2.1.0**: multiple runs (one per file + summary run with aggregated metadata)
+>
+> **4. Tests — 42 new in `tests/aggregate.test.ts`**:
+> - aggregate() (18): empty input (1), single file low/high (2), many files totals/highest risk/EU tiers/confidence/dedup articles/dedup mitigations (6), heatmap sorting/file-level data (2), rule findings by severity/sum/zero (3), metadata (1), totalFindings counting (1)
+> - renderAggregatedReport() (14): JSON valid parse (1), Markdown h1/tables/heatmap/articles/mitigations/confidence/footer (7), HTML doctype/CSS/title/cards/heatmap/footer (6)
+> - SARIF (3): valid JSON + schema, multiple runs, summary run
+> - CLI integration (10): require --dir, missing dir, empty dir, invalid JSON only, valid aggregation, skip non-scan JSON, markdown format, html format, sarif format, reject invalid format
+>
+> **5. Full suite: 547 tests, 22 files, 0 failures, 1.32s.** Typecheck clean. Zero regressions.
 
 ### DIRECTIVE-NXTG-20260223-10 — Confidence Score Calibration
 **From**: NXTG-AI CoS | **Priority**: P1
