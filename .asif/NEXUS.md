@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 151 tests, jsdom + @testing-library/react)
+- Vitest (testing, 164 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | Full pipeline + multi-provider integration tests. Tests expanded to 164 across 10 files. |
 | 2026-02-22 | EU AI Act compliance module (risk mapping + report generator). Tests expanded to 151 across 8 files. |
 | 2026-02-22 | Claude provider + provider registry added. Tests expanded to 123 across 7 files. |
 | 2026-02-22 | Provider abstraction layer added (LLMProvider interface + GeminiProvider). Tests expanded to 95. |
@@ -438,3 +439,46 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - Report generator (10): structure, tier counting, highest tier, article aggregation, skip unverified, mitigations per tier, empty claims, minimal-only
 >
 > **5. Full suite: 151 tests, 8 files, 0 failures, 580ms.** No existing files modified.
+
+### DIRECTIVE-NXTG-20260222-06 — Full Pipeline Integration Test
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 00:50 | **Estimate**: M (~15min) | **Status**: COMPLETED
+
+**Context**: 151 tests, provider abstraction, EU AI Act mapping — all unit tested. Missing: an integration test that proves the full pipeline works end-to-end. Input text → claim extraction → risk scoring → EU AI Act mapping → compliance report.
+
+**Action Items**:
+1. [ ] Create `tests/integration/test_full_pipeline.ts`:
+   - Mock the LLM provider (use gemini_provider with mocked API)
+   - Input: sample text with 3 verifiable claims
+   - Assert: claims extracted, risk scores assigned, EU AI Act categories mapped, compliance report generated
+   - This is the "golden path" test — proves the whole system works
+2. [ ] Create `tests/integration/test_multi_provider.ts`:
+   - Run same input through both Gemini and Claude providers (mocked)
+   - Assert: both produce valid ClaimResult[] (shapes match, content may differ)
+3. [ ] Target: 160+ total tests. Run full suite, commit, push.
+
+**Constraints**:
+- ALL API calls mocked — zero real API usage
+- Integration tests should run in < 5 seconds
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> **1. `tests/integration/full-pipeline.test.ts` — 6 tests**:
+> - Golden path: 3 claims → extract, filter, verify, risk score, EU AI Act mapping, compliance report (asserts every stage)
+> - All-supported path: low risk → minimal EU tier → voluntary mitigations
+> - Critical path: 3 contradictions → critical risk → limited EU tier → Article 50 mitigations
+> - Unacceptable path: social scoring claim → prohibited tier → CRITICAL mitigation → Article 5 triggered
+> - Extraction failure: empty report with no-claims mitigation
+> - Mixed results: 3 claims across high/limited/minimal tiers, verifies report aggregation
+>
+> **2. `tests/integration/multi-provider.test.ts` — 7 tests**:
+> - Both providers extract claims with valid Claim[] shapes (id, text, type, importance)
+> - Both providers verify claims with valid VerificationResult shapes
+> - Both providers generate critiques with valid CritiqueResult shapes
+> - Registry returns distinct providers with correct names/modelIds
+> - Both providers handle extraction errors identically (empty array)
+> - Both providers handle verification errors identically (unverified status)
+> - Both providers handle critique errors identically (fallback response)
+>
+> **3. Full suite: 164 tests, 10 files, 0 failures, 605ms.** All API calls mocked. Under 1s total.
