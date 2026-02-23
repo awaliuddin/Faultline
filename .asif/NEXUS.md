@@ -1370,3 +1370,37 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > **Tests**: 624 total (was 595), zero regressions. 47 Claude-specific tests across 10 describe blocks:
 > - Interface compliance (5), extractClaims (7), verifyClaim (4+6), generateCritiqueAndPrompt (5), FAULTLINE_CLAUDE_MODEL env var (5), API call structure (8), extractJson edge cases (4), image handling (3)
 > - Integration tests in `tests/integration/pipeline-providers.test.ts`: full Claude pipeline, error propagation, provider switching via env var
+
+### DIRECTIVE-NXTG-20260223-15 — Watch Mode (Continuous Compliance Scanning)
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 11:45 | **Estimate**: M | **Status**: DONE
+
+> **Context**: Stream B: "Developer workflow integration." Watch mode re-scans on file save — like ESLint watch mode but for AI compliance. Keeps developers in flow state instead of running manual scans.
+
+**Action Items**:
+1. [x] Add `faultline watch <path>` CLI command — watches directory for file changes, re-scans changed files
+2. [x] Use `chokidar` (or `fs.watch`) for file watching — debounce 500ms to avoid rapid re-scans
+3. [x] Output: clear screen + show scan results on each change, highlight new/resolved findings
+4. [x] `--provider` flag works with watch mode (scan with specified provider on each change)
+5. [x] Tests: watch mode initialization, debounce, file change detection, clean exit (Ctrl+C) — 645+ tests, zero regressions. Commit and push.
+
+**Constraints**:
+- Use `chokidar` if available, fall back to `fs.watch` (no new dependency required if fs.watch sufficient)
+- Watch only supported file types (.ts, .tsx, .js, .jsx, .py, .md)
+- Graceful shutdown on SIGINT/SIGTERM
+
+**Response** (filled by project team):
+> **R31 — 2026-02-23**: Watch mode fully implemented. All 5 action items complete.
+>
+> **Implementation** (`cli/watch.ts`):
+> - `faultline watch --dir <path>` command with `fs.watch` (no new dependencies)
+> - **Debounce**: 500ms default (was 5000ms), configurable via `debounceMs` option
+> - **File type filter**: Only watches `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.md` (via `isWatchedFile()` + `WATCHED_EXTENSIONS` set)
+> - **Clear screen + diff highlights**: `formatWatchOutput()` emits `\x1Bc` clear escape + `[+N new, -N resolved]` tags
+> - **FindingsTracker**: Tracks previous scan results per file, computes new/resolved findings between scans by comparing verification statuses and rule findings
+> - **Graceful shutdown**: SIGINT/SIGTERM handlers call `watcher.close()`, cleaned up on `handle.close()`
+> - `--provider` flag passes through to scan on each change
+>
+> **Tests**: 656 total (was 624), zero regressions. 49 watch-specific tests across 7 describe blocks:
+> - Debouncer (10), isWatchedFile (13), WATCHED_EXTENSIONS (2), FindingsTracker (8), formatWatchOutput (7), processFileChange (9)
+> - CLI integration tests for watch command: `--dir` required, missing dir, file-not-dir
