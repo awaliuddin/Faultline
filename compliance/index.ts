@@ -8,6 +8,7 @@ export {
 
 export {
   type ComplianceReport,
+  type ConfidenceDistribution,
   type EURiskSummary,
   type TriggeredArticle,
   generateComplianceReport,

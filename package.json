@@ -1,8 +1,22 @@
 {
-  "name": "faultline:-stress-test-ai-responses",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@nxtg-ai/faultline",
+  "version": "0.1.0",
+  "description": "AI Trust & Safety Platform — Verify AI claims, assess risk, ensure EU AI Act compliance.",
   "type": "module",
+  "bin": {
+    "faultline": "./bin/faultline.js"
+  },
+  "files": [
+    "bin/",
+    "cli/",
+    "compliance/",
+    "providers/",
+    "rules/",
+    "types.ts",
+    "services/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -10,15 +24,37 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "scan": "npx tsx cli/index.ts scan",
-    "report": "npx tsx cli/index.ts report",
-    "faultline": "npx tsx cli/index.ts"
+    "scan": "tsx cli/index.ts scan",
+    "report": "tsx cli/index.ts report",
+    "faultline": "tsx cli/index.ts"
+  },
+  "keywords": [
+    "ai",
+    "trust",
+    "safety",
+    "verification",
+    "claims",
+    "eu-ai-act",
+    "compliance",
+    "llm",
+    "gemini",
+    "claude"
+  ],
+  "author": "Asif Waliuddin",
+  "license": "CC-BY-4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awaliuddin/Faultline.git"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@google/genai": "^1.32.0",
     "lucide-react": "^0.556.0",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react-dom": "^19.2.1",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

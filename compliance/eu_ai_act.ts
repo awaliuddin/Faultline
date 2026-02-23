@@ -105,6 +105,8 @@ export interface ClaimRiskMapping {
   category: EURiskCategory;
   matchedPatterns: string[];
   confidence: 'high' | 'medium' | 'low';
+  /** Numeric confidence score (0.0-1.0) for the risk classification. */
+  confidenceScore: number;
 }
 
 /**
@@ -134,6 +136,7 @@ export function mapClaimToRiskCategory(
         category: EU_RISK_CATEGORIES.unacceptable,
         matchedPatterns,
         confidence: 'high',
+        confidenceScore: 0.95,
       };
     }
   }
@@ -158,6 +161,7 @@ export function mapClaimToRiskCategory(
       category: EU_RISK_CATEGORIES.high,
       matchedPatterns,
       confidence: isEscalated ? 'high' : 'medium',
+      confidenceScore: isEscalated ? 0.9 : 0.7,
     };
   }
 
@@ -175,6 +179,7 @@ export function mapClaimToRiskCategory(
       category: EU_RISK_CATEGORIES.limited,
       matchedPatterns: ['Article 50 (AI-generated content)'],
       confidence: verification.status === 'contradicted' ? 'high' : 'medium',
+      confidenceScore: verification.status === 'contradicted' ? 0.85 : 0.6,
     };
   }
 
@@ -187,5 +192,6 @@ export function mapClaimToRiskCategory(
     category: EU_RISK_CATEGORIES.minimal,
     matchedPatterns: [],
     confidence: 'low',
+    confidenceScore: 0.3,
   };
 }

@@ -3,7 +3,7 @@
 **AI Trust & Safety Platform — Verify AI claims, assess risk, ensure EU AI Act compliance.**
 
 [![CI](https://github.com/awaliuddin/Faultline/actions/workflows/ci.yml/badge.svg)](https://github.com/awaliuddin/Faultline/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-164%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-299%20passing-brightgreen)](tests/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-CC%20BY%204.0-green.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Kaggle](https://img.shields.io/badge/Kaggle-Competition%20Entry-20BEFF.svg)](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina)

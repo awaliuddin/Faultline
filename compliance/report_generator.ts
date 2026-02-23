@@ -6,6 +6,12 @@ import {
   mapClaimToRiskCategory,
 } from './eu_ai_act';
 
+export interface ConfidenceDistribution {
+  high: number;   // score >= 0.8
+  medium: number;  // 0.5 <= score < 0.8
+  low: number;     // score < 0.5
+}
+
 export interface ComplianceReport {
   generatedAt: string;
   overallRiskLevel: AnalysisState['overallRisk'];
@@ -13,6 +19,7 @@ export interface ComplianceReport {
   claimMappings: ClaimRiskMapping[];
   triggeredArticles: TriggeredArticle[];
   mitigations: string[];
+  confidenceDistribution: ConfidenceDistribution;
 }
 
 export interface EURiskSummary {
@@ -31,23 +38,48 @@ export interface TriggeredArticle {
 }
 
 /**
+ * Compute confidence distribution from claim mappings.
+ * High: score >= 0.8, Medium: 0.5 <= score < 0.8, Low: score < 0.5
+ */
+function computeConfidenceDistribution(mappings: ClaimRiskMapping[]): ConfidenceDistribution {
+  const dist: ConfidenceDistribution = { high: 0, medium: 0, low: 0 };
+  for (const m of mappings) {
+    if (m.confidenceScore >= 0.8) dist.high++;
+    else if (m.confidenceScore >= 0.5) dist.medium++;
+    else dist.low++;
+  }
+  return dist;
+}
+
+/**
  * Generate a compliance report from Faultline analysis results.
  *
  * Takes claims, their verification results, and the overall risk level,
  * then maps each claim to an EU AI Act risk category and aggregates
  * into a structured report.
+ *
+ * @param minConfidence - Optional threshold (0.0-1.0). Claims below this score are excluded.
  */
 export function generateComplianceReport(
   claims: Claim[],
   verifications: Record<string, VerificationResult>,
   overallRisk: AnalysisState['overallRisk'],
+  minConfidence?: number,
 ): ComplianceReport {
   // Map each claim that has a verification result
-  const claimMappings: ClaimRiskMapping[] = [];
+  let claimMappings: ClaimRiskMapping[] = [];
   for (const claim of claims) {
     const verification = verifications[claim.id];
     if (!verification) continue;
     claimMappings.push(mapClaimToRiskCategory(claim, verification));
+  }
+
+  // Compute confidence distribution before filtering
+  const confidenceDistribution = computeConfidenceDistribution(claimMappings);
+
+  // Apply confidence threshold filter
+  if (minConfidence !== undefined && minConfidence > 0) {
+    claimMappings = claimMappings.filter(m => m.confidenceScore >= minConfidence);
   }
 
   // Count per tier
@@ -105,6 +137,7 @@ export function generateComplianceReport(
     claimMappings,
     triggeredArticles,
     mitigations,
+    confidenceDistribution,
   };
 }
 
