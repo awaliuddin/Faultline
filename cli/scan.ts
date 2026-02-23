@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { Claim, VerificationResult, AnalysisState } from '../types.js';
 import type { LLMProvider } from '../providers/base_provider.js';
-import { getProvider, registerProvider } from '../providers/registry.js';
+import { getProvider } from '../providers/registry.js';
 import { generateComplianceReport, type ComplianceReport } from '../compliance/report_generator.js';
 import { runAllRules, runRules, type Finding } from '../rules/index.js';
 
@@ -35,63 +35,24 @@ function filterClaimsForVerification(claims: Claim[]): Claim[] {
     .slice(0, 8);
 }
 
-/**
- * Create a deterministic mock provider for offline testing.
- */
-function createMockProvider(): LLMProvider {
-  return {
-    name: 'Mock Provider',
-    modelId: 'mock-v1',
-
-    async extractClaims(text: string): Promise<Claim[]> {
-      if (!text) return [];
-      // Split sentences into claims
-      const sentences = text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean);
-      return sentences.map((s, i) => ({
-        id: `c${i + 1}`,
-        text: s,
-        type: 'fact' as const,
-        importance: Math.min(5, 3 + Math.floor(i / 2)),
-      }));
-    },
-
-    async verifyClaim(claim: Claim) {
-      return {
-        claimId: claim.id,
-        status: 'supported' as const,
-        explanation: 'Mock verification: supported.',
-        sources: [],
-      };
-    },
-
-    async generateCritiqueAndPrompt() {
-      return {
-        critique: 'Mock assessment: stable.',
-        improvedPrompt: 'No changes needed.',
-      };
-    },
-  };
-}
-
 export async function scan(text: string, providerName?: string, minConfidence?: number, ruleNames?: string[]): Promise<ScanResult> {
-  let provider: LLMProvider;
+  const resolvedProvider = providerName || 'gemini';
 
-  if (providerName === 'mock') {
-    provider = createMockProvider();
-  } else {
-    const apiKey =
-      providerName === 'claude'
+  let apiKey = '';
+  if (resolvedProvider !== 'mock') {
+    apiKey =
+      resolvedProvider === 'claude'
         ? process.env.ANTHROPIC_API_KEY || ''
         : process.env.GEMINI_API_KEY || '';
 
-    if (!apiKey && providerName !== 'mock') {
+    if (!apiKey) {
       throw new Error(
-        `No API key found. Set ${providerName === 'claude' ? 'ANTHROPIC_API_KEY' : 'GEMINI_API_KEY'} or use --provider mock.`,
+        `No API key found. Set ${resolvedProvider === 'claude' ? 'ANTHROPIC_API_KEY' : 'GEMINI_API_KEY'} or use --provider mock.`,
       );
     }
-
-    provider = getProvider(apiKey, providerName);
   }
+
+  const provider: LLMProvider = getProvider(apiKey, resolvedProvider);
 
   const claims = await provider.extractClaims(text);
   const toVerify = filterClaimsForVerification(claims);

@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 453 tests, jsdom + @testing-library/react)
+- Vitest (testing, 473 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-23 | Multi-provider abstraction: formalized MockProvider, eliminated scan.ts special-case, mock registered in registry. 473 tests, 20 files. |
 | 2026-02-23 | Severity-based exit codes (--fail-on flag) for CI pipeline integration. 453 tests, 19 files. |
 | 2026-02-23 | GitHub Action for CI/CD integration (composite action, threshold gate, SARIF upload, example workflow). 445 tests, 19 files. |
 | 2026-02-23 | Red-team prompt template library (15 templates, 5 categories), templates list/scan commands. 415 tests, 18 files. |
@@ -1126,15 +1127,46 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 ### DIRECTIVE-NXTG-20260223-09 — Multi-Provider Abstraction Layer
 **From**: NXTG-AI CoS | **Priority**: P1
-**Injected**: 2026-02-23 04:45 | **Estimate**: M | **Status**: PENDING
+**Injected**: 2026-02-23 04:45 | **Estimate**: M | **Status**: COMPLETED
 
 > **Context**: Stream B — Faultline Pro (P-08b) must be FM-agnostic. Current implementation uses Gemini only. Abstracting the provider makes Faultline testable against any LLM. This is the foundation for the Pro version.
 
 **Action Items**:
-1. [ ] Create provider abstraction: `LLMProvider` interface with `analyze(prompt, options)` → `ProviderResponse`
-2. [ ] Implement `MockProvider` (already exists — formalize it), `GeminiProvider` (extract from current code)
-3. [ ] Provider selection via `--provider mock|gemini` CLI flag and `.faultlinerc.json` provider field
-4. [ ] Tests for provider interface compliance, provider switching, fallback to mock — zero regressions
+1. [x] Create provider abstraction: `LLMProvider` interface with `analyze(prompt, options)` → `ProviderResponse`
+2. [x] Implement `MockProvider` (already exists — formalize it), `GeminiProvider` (extract from current code)
+3. [x] Provider selection via `--provider mock|gemini` CLI flag and `.faultlinerc.json` provider field
+4. [x] Tests for provider interface compliance, provider switching, fallback to mock — zero regressions
 
 **Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
 >
+> **Context**: The `LLMProvider` interface, `GeminiProvider`, `ClaudeProvider`, and provider registry already existed from Directives 03-04. The mock provider was an inline anonymous object in `cli/scan.ts` with a special-case `if (providerName === 'mock')` branch. This directive formalized mock as a first-class provider and eliminated the special-case logic.
+>
+> **1. `providers/mock_provider.ts` — formalized MockProvider class**:
+> - `MockProvider` class implementing `LLMProvider` interface (was inline anonymous object in scan.ts)
+> - Same deterministic behavior: sentence-splitting extraction, "supported" for all verifications, static critique
+> - Exported `createMockProvider: ProviderFactory` — matches gemini/claude factory pattern
+> - No API key required — works offline with empty string
+>
+> **2. Registry updated — mock is now a first-class provider**:
+> - `providers/registry.ts` — `mock` registered alongside `gemini` and `claude` in the factory map
+> - `providers/index.ts` — barrel export updated with `createMockProvider`
+> - `getProvider('', 'mock')` now works through the registry (no special-case needed)
+>
+> **3. `cli/scan.ts` refactored — eliminated mock special-case**:
+> - Removed 30-line inline `createMockProvider()` function
+> - Removed `if (providerName === 'mock')` branch
+> - All providers (mock, gemini, claude) now resolve through the same `getProvider(apiKey, name)` path
+> - API key check skips gracefully for mock (empty string allowed)
+> - `--provider mock|gemini|claude` and `.faultlinerc.json` `provider` field work uniformly
+>
+> **4. Config validation fix**: `.faultlinerc.json` `output-format` field now accepts `sarif` (was missing from validation since Directive 04 added SARIF output)
+>
+> **5. Tests — 20 new in `tests/mock-provider.test.ts`**:
+> - Interface compliance (5): implements LLMProvider, name, modelId, factory type, independent instances
+> - extractClaims (4): text extraction, empty input, multiple terminators, importance capping
+> - verifyClaim (2): supported status, claim ID passthrough
+> - generateCritiqueAndPrompt (1): deterministic output
+> - Registry integration (8): listed in providers, getProvider returns mock, default stays gemini, env var fallback, explicit overrides env, no API key needed, seamless switching between all 3 providers, fallback to mock when others would fail
+>
+> **6. Full suite: 473 tests, 20 files, 0 failures, 1.28s.** Typecheck clean. Zero regressions.

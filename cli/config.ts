@@ -74,7 +74,7 @@ function validateConfig(raw: Record<string, unknown>): FaultlineConfig {
   }
 
   if (typeof raw['output-format'] === 'string') {
-    if (['json', 'markdown', 'html'].includes(raw['output-format'])) {
+    if (['json', 'markdown', 'html', 'sarif'].includes(raw['output-format'])) {
       config['output-format'] = raw['output-format'] as OutputFormat;
     }
   }
