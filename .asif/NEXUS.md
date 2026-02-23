@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 176 tests, jsdom + @testing-library/react)
+- Vitest (testing, 192 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | CLI entry point (scan/report/version) + quickstart example. Tests expanded to 192 across 12 files. |
 | 2026-02-22 | Multi-provider pipeline integration tests (Gemini/Claude/mock OpenAI). Tests expanded to 176 across 11 files. |
 | 2026-02-22 | Public README rewrite + docs/ARCHITECTURE.md. |
 | 2026-02-22 | Full pipeline + multi-provider integration tests. Tests expanded to 164 across 10 files. |
@@ -551,3 +552,39 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > **2. Mock OpenAI provider**: Inline `LLMProvider` implementation registered via `registerProvider('openai', ...)`. Returns deterministic claims/verifications. Proves the registry pattern works with any third-party provider.
 >
 > **3. Full suite: 176 tests, 11 files, 0 failures, 657ms.** All API calls mocked.
+
+### DIRECTIVE-NXTG-20260222-09 — CLI Entry Point + Quick-Start Demo
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-22 22:45 | **Estimate**: M | **Status**: COMPLETED
+
+**Action Items**:
+1. [ ] Create `faultline` CLI entry point (pyproject.toml console_scripts) with subcommands: `scan`, `report`, `version`
+2. [ ] `faultline scan --input sample.txt --provider mock` → runs full pipeline, outputs JSON report to stdout
+3. [ ] `faultline report --input results.json` → renders human-readable summary
+4. [ ] Add `examples/quickstart.sh` showing 3-command flow: install → scan → read report
+5. [ ] Tests for CLI entry points — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> Note: Directive referenced Python (pyproject.toml) — adapted to TypeScript/Node with `tsx` runner and npm scripts.
+>
+> **1. CLI entry point at `cli/index.ts`** with subcommands:
+> - `scan --input <file> [--provider gemini|claude|mock]` — runs full pipeline, outputs JSON report to stdout
+> - `report --input <results.json>` — renders human-readable summary with risk tiers, verifications, triggered articles, mitigations
+> - `version` — prints version
+> - No args / unknown command — prints usage
+>
+> **2. `cli/scan.ts`** — full pipeline: extract → filter → verify → risk → EU map → report. Built-in mock provider for offline testing (splits sentences into claims, returns "supported").
+>
+> **3. `cli/report.ts`** — renders structured text report with sections: risk summary, claim verifications (with status icons), triggered EU AI Act articles, recommended mitigations.
+>
+> **4. `examples/quickstart.sh`** — 3-command flow: `npm install` → `scan --provider mock` → `report`. No API key needed.
+> **`examples/sample.txt`** — EU AI Act sample text that triggers unacceptable (social scoring) + high-risk (recruitment) categories.
+>
+> **5. npm scripts added**: `npm run scan`, `npm run report`, `npm run faultline`.
+>
+> **6. Tests — 16 new in `tests/cli.test.ts`**:
+> - version (1), scan (5: missing flag, missing file, empty file, mock scan, compliance report), report (4: missing flag, missing file, invalid JSON, full render), unknown/no command (2), renderReport unit tests (4: header/footer, provider/risk, verifications, mitigations)
+>
+> **7. Full suite: 192 tests, 12 files, 0 failures, 690ms.**

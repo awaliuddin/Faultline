@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "scan": "npx tsx cli/index.ts scan",
+    "report": "npx tsx cli/index.ts report",
+    "faultline": "npx tsx cli/index.ts"
   },
   "dependencies": {
     "@google/genai": "^1.32.0",

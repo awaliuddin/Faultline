@@ -1,0 +1,1 @@
+The European Union's AI Act was fully adopted in August 2024. It establishes four risk tiers for AI systems: unacceptable, high-risk, limited, and minimal. Social scoring systems used by governments are classified as unacceptable risk and are banned. AI-powered recruitment tools fall under the high-risk category and require conformity assessments before deployment.
