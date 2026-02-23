@@ -92,7 +92,7 @@
 **Status**: SHIPPED | **Priority**: P0
 **What**: Build unit/integration tests for the pipeline. Target full pipeline coverage.
 **Baseline (2026-02-18)**: Zero tests exist. Vitest not installed. No test script in package.json.
-**Shipped (2026-02-22)**: 73 tests across 3 test files. Vitest + jsdom + @testing-library/react. All Gemini API calls mocked. Coverage: types.ts, geminiService.ts (cleanJson, extractClaims, verifyClaim, generateCritiqueAndPrompt), App.tsx business logic (calculateRisk, filterClaimsForVerification, buildInitialVerifications).
+**Shipped (2026-02-22)**: 95 tests across 5 test files. Vitest + jsdom + @testing-library/react. All Gemini API calls mocked. Coverage: types.ts, geminiService.ts, App.tsx business logic, provider abstraction layer, integration pipeline tests.
 
 ### N-09: CI/CD Pipeline
 **Status**: SHIPPED | **Priority**: P0
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | Provider abstraction layer added (LLMProvider interface + GeminiProvider). Tests expanded to 95. |
 | 2026-02-22 | N-08 SHIPPED (73 tests), N-09 SHIPPED (CI workflow). 9 shipped, 0 building, 3 ideas. |
 | 2026-02-16 | Created. 12 initiatives across 5 pillars. 7 shipped, 2 building, 3 ideas. |
 
@@ -294,3 +295,44 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 **Cross-Project Synergy**: Forge + Faultline = "Build + Validate" loop — unique in market. No competitor has this. Forge orchestrates AI coding agents → Faultline validates output. Position as: "Generate with confidence, verify before ship."
 
 **Strategic Path**: P-08b (FM-agnostic rewrite) is where the opportunity is. Current Kaggle codebase → test foundation → P-08b split → EU AI Act compliance mapping → open-source core with enterprise features (study Promptfoo's GTM).
+
+### DIRECTIVE-NXTG-20260222-03 — Test Suite Expansion + FM-Agnostic Architecture Prep
+**From**: NXTG-AI CoS | **Priority**: P0
+**Injected**: 2026-02-22 23:30 | **Estimate**: M (~25min) | **Status**: COMPLETED
+
+> **Estimate key**: S = 2-10min, M = 10-30min, L = 30-90min
+
+**Context**: Round 5 shipped 12 tests from zero — great start. Stream B says: "42% CAGR, EU AI Act Aug 2026, FM-agnostic rewrite is where the opportunity is." Need to double the test count AND prep the architecture for multi-model support (not just Gemini).
+
+**Action Items**:
+1. [x] Expand test suite to 25+ tests:
+   - Add edge case tests for claim extraction (empty input, malformed JSON, timeout)
+   - Add tests for risk scoring boundary conditions
+   - Add integration test: full claim-extraction → risk-scoring pipeline (mocked API)
+2. [x] Create `src/providers/` directory with provider abstraction:
+   - `base_provider.ts` — interface/abstract class: `analyzeContent(input) → ClaimResult[]`
+   - `gemini_provider.ts` — move existing Gemini logic behind the interface
+   - This prepares for Claude, GPT, open-source providers WITHOUT changing current functionality
+3. [x] Run full test suite — 25+ must pass. Commit and push.
+
+**Constraints**:
+- Do NOT add new LLM providers yet — just create the abstraction layer
+- Existing functionality must not change — this is a refactor, not a feature
+- Mock all API calls in tests
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> **1. Test suite expanded — 95 tests total (target 25+)**:
+> - Previous: 73 tests (types, geminiService, app-logic)
+> - Added `tests/providers.test.ts` — 15 tests: LLMProvider interface compliance, factory pattern, delegation to geminiService, error handling through provider layer
+> - Added `tests/integration.test.ts` — 7 tests: full extract→filter→verify→risk pipeline (low/high/critical outcomes), extraction failure recovery, verification failure recovery, provider abstraction pipeline, claim filtering logic
+> - Net new: +22 tests across 2 new test files
+>
+> **2. Provider abstraction created at `providers/`** (not `src/providers/` — project has flat structure, no `src/` dir):
+> - `providers/base_provider.ts` — `LLMProvider` interface with `extractClaims()`, `verifyClaim()`, `generateCritiqueAndPrompt()`. Also defines `ImageInput`, `CritiqueResult`, `ProviderFactory` types.
+> - `providers/gemini_provider.ts` — `GeminiProvider` class implementing `LLMProvider`, thin adapter delegating to existing `services/geminiService.ts`. Factory: `createGeminiProvider(apiKey)`.
+> - `providers/index.ts` — barrel export for clean imports.
+> - **No changes to existing files** — `App.tsx` and `services/geminiService.ts` remain untouched. The abstraction is additive, ready for P-08b FM-agnostic split.
+>
+> **3. Full suite: 95 tests, 5 files, 0 failures, 467ms.** All Gemini API calls mocked.
