@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 73 tests, jsdom + @testing-library/react)
+- Vitest (testing, 123 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | Claude provider + provider registry added. Tests expanded to 123 across 7 files. |
 | 2026-02-22 | Provider abstraction layer added (LLMProvider interface + GeminiProvider). Tests expanded to 95. |
 | 2026-02-22 | N-08 SHIPPED (73 tests), N-09 SHIPPED (CI workflow). 9 shipped, 0 building, 3 ideas. |
 | 2026-02-16 | Created. 12 initiatives across 5 pillars. 7 shipped, 2 building, 3 ideas. |
@@ -336,3 +337,55 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - **No changes to existing files** — `App.tsx` and `services/geminiService.ts` remain untouched. The abstraction is additive, ready for P-08b FM-agnostic split.
 >
 > **3. Full suite: 95 tests, 5 files, 0 failures, 467ms.** All Gemini API calls mocked.
+
+### DIRECTIVE-NXTG-20260222-04 — Claude Provider + Provider Registry
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 00:00 | **Estimate**: M (~20min) | **Status**: COMPLETED
+
+**Context**: Provider abstraction shipped (base_provider.ts + gemini_provider.ts). The FM-agnostic claim needs a second provider to prove the abstraction works. Claude is the natural second choice — Anthropic's API is well-documented and different enough from Gemini to validate the interface.
+
+**Action Items**:
+1. [ ] Create `src/providers/claude_provider.ts` — implements base_provider interface using Anthropic API
+   - Same `analyzeContent()` signature as gemini_provider
+   - Map Anthropic's response format to ClaimResult[]
+2. [ ] Create `src/providers/registry.ts` — provider registry:
+   - `getProvider(name: string): BaseProvider`
+   - Default to Gemini, configurable via environment variable
+3. [ ] Add 10+ tests for claude_provider (all mocked — no real API calls)
+4. [ ] Add tests for registry (provider lookup, fallback, unknown provider error)
+5. [ ] Total test count target: 35+. Run full suite, commit, push.
+
+**Constraints**:
+- Mock ALL Anthropic API calls — zero real API usage in tests
+- Do NOT change existing Gemini functionality — additive only
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> **1. Claude provider created at `providers/claude_provider.ts`**:
+> - `ClaudeProvider` class implementing `LLMProvider` interface
+> - Uses Anthropic Messages API via `fetch` (no SDK dependency — keeps repo lean)
+> - `extractClaims()`, `verifyClaim()`, `generateCritiqueAndPrompt()` — all match base_provider interface
+> - JSON extraction handles markdown code blocks and raw JSON responses
+> - Graceful error handling with fallbacks matching Gemini provider patterns
+> - Factory export: `createClaudeProvider(apiKey)`
+>
+> **2. Provider registry created at `providers/registry.ts`**:
+> - `getProvider(apiKey, name?)` — returns provider by name, falls back to `FAULTLINE_PROVIDER` env var, then defaults to Gemini
+> - `registerProvider(name, factory)` — runtime registration of custom providers
+> - `listProviders()` — returns registered provider names
+> - Ships with `gemini` and `claude` pre-registered
+>
+> **3. Claude provider tests — 18 tests in `tests/claude-provider.test.ts`**:
+> - Interface compliance (5): implements LLMProvider, correct name/modelId, factory type, independent instances
+> - extractClaims (7): parsed response, empty input, markdown-wrapped JSON, image input, API error, non-array response, correct headers/API key
+> - verifyClaim (4): supported/contradicted status, API error fallback, non-OK response fallback
+> - generateCritiqueAndPrompt (2): success response, error fallback
+> - All Anthropic API calls mocked via `vi.stubGlobal('fetch')`
+>
+> **4. Registry tests — 10 tests in `tests/registry.test.ts`**:
+> - getProvider (7): default Gemini, explicit Gemini, explicit Claude, unknown provider error, error message content, env var fallback, explicit overrides env
+> - registerProvider (1): custom provider registration
+> - listProviders (2): includes built-ins, returns string array
+>
+> **5. Full suite: 123 tests, 7 files, 0 failures, 529ms.** All API calls mocked. No existing files modified except `providers/index.ts` (barrel export updated).
