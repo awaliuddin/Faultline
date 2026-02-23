@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | Public README rewrite + docs/ARCHITECTURE.md. |
 | 2026-02-22 | Full pipeline + multi-provider integration tests. Tests expanded to 164 across 10 files. |
 | 2026-02-22 | EU AI Act compliance module (risk mapping + report generator). Tests expanded to 151 across 8 files. |
 | 2026-02-22 | Claude provider + provider registry added. Tests expanded to 123 across 7 files. |
@@ -482,3 +483,46 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - Both providers handle critique errors identically (fallback response)
 >
 > **3. Full suite: 164 tests, 10 files, 0 failures, 605ms.** All API calls mocked. Under 1s total.
+
+### DIRECTIVE-NXTG-20260222-07 — Public README + Architecture Docs
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 01:10 | **Estimate**: M (~15min) | **Status**: COMPLETED
+
+**Context**: 164 tests, provider abstraction, EU AI Act mapping, full pipeline integration tests. This is a credible product. But README is still internal-facing. Polish for developers.
+
+**Action Items**:
+1. [ ] Rewrite README.md:
+   - Hero: "AI Trust & Safety Platform — Verify AI claims, assess risk, ensure EU AI Act compliance"
+   - Badge strip: tests, CI, TypeScript, license
+   - Quick start: 3 commands
+   - Architecture: Input → Provider (Gemini/Claude) → Claims → Risk Scoring → EU AI Act Mapping → Report
+   - Features: multi-provider, compliance mapping, competition-hardened
+2. [ ] Create `docs/ARCHITECTURE.md` — system design overview with data flow
+3. [ ] Run tests. Commit and push.
+
+**Constraints**:
+- README under 150 lines — concise and technical
+- Architecture doc should explain the provider abstraction pattern
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> **1. README.md rewritten (140 lines)**:
+> - Hero line: "AI Trust & Safety Platform — Verify AI claims, assess risk, ensure EU AI Act compliance"
+> - Badge strip: CI, tests (164), TypeScript, license, Kaggle
+> - Quick start: clone, install, dev (3 commands)
+> - ASCII pipeline diagram: Input → Provider → Claims → Risk → EU Mapping → Report
+> - Features: multi-provider, claim forensics, web-grounded verification, EU AI Act compliance, 164 tests
+> - Project structure, tech stack table, provider configuration
+> - Removed old competition-heavy content, kept demo/video/writeup links
+>
+> **2. `docs/ARCHITECTURE.md` created**:
+> - 5 pipeline stages with TypeScript interfaces and decision tables
+> - Provider abstraction: LLMProvider interface, GeminiProvider vs ClaudeProvider implementations
+> - Registry usage with code examples
+> - EU AI Act mapping table (all 4 tiers with triggers and article references)
+> - ASCII data flow diagram
+> - Error handling matrix (every stage's failure mode and recovery)
+> - Test architecture overview
+>
+> **3. Tests: 164 passing, 10 files, 643ms.** No changes to test files.
