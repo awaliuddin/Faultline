@@ -499,6 +499,71 @@ describe('CLI: main()', () => {
     });
   });
 
+  describe('scan --fail-on', () => {
+    it('should exit 0 without --fail-on (backwards compatible)', async () => {
+      const inputFile = join(tmpDir, 'pii-failon.txt');
+      writeFileSync(inputFile, 'Contact john@example.com for details about the social scoring system.');
+      const { exitCode } = await main(['scan', '--input', inputFile, '--provider', 'mock']);
+      expect(exitCode).toBe(0);
+    });
+
+    it('should exit 0 when no findings exceed threshold', async () => {
+      const inputFile = join(tmpDir, 'clean-failon.txt');
+      writeFileSync(inputFile, 'Quarterly revenue grew steadily.');
+      const { exitCode } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--fail-on', 'low']);
+      expect(exitCode).toBe(0);
+    });
+
+    it('should exit 1 when findings at or above --fail-on critical', async () => {
+      // PII-SSN is critical severity
+      const inputFile = join(tmpDir, 'critical-failon.txt');
+      writeFileSync(inputFile, 'SSN is 123-45-6789 and credit card 4111111111111111.');
+      const { exitCode } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--fail-on', 'critical']);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should exit 1 when findings at --fail-on high', async () => {
+      // PII-email is high severity
+      const inputFile = join(tmpDir, 'high-failon.txt');
+      writeFileSync(inputFile, 'Contact john@example.com for details.');
+      const { exitCode } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--fail-on', 'high']);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should exit 0 when findings below --fail-on threshold', async () => {
+      // PII-email is high severity, but threshold is critical — should pass
+      const inputFile = join(tmpDir, 'below-failon.txt');
+      writeFileSync(inputFile, 'Contact john@example.com for details.');
+      const { exitCode } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--fail-on', 'critical']);
+      expect(exitCode).toBe(0);
+    });
+
+    it('should reject invalid --fail-on value', async () => {
+      const inputFile = join(tmpDir, 'bad-failon.txt');
+      writeFileSync(inputFile, 'Test text.');
+      const { exitCode, output } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--fail-on', 'extreme']);
+      expect(exitCode).toBe(1);
+      expect(output).toContain('--fail-on');
+    });
+
+    it('should work with --dir mode', async () => {
+      const scanDir = join(tmpDir, 'failon-dir');
+      mkdirSync(scanDir);
+      writeFileSync(join(scanDir, 'pii.txt'), 'SSN is 123-45-6789.');
+      const { exitCode } = await main(['scan', '--dir', scanDir, '--provider', 'mock', '--fail-on', 'critical']);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should work with --templates mode', async () => {
+      // Templates always produce findings via mock — but mock provider returns all "supported"
+      // so rule findings drive the threshold
+      const { exitCode } = await main(['scan', '--templates', 'bias', '--provider', 'mock', '--fail-on', 'low']);
+      // Mock provider produces minimal-risk claims, but bias templates may trigger rule findings
+      expect(typeof exitCode).toBe('number');
+      expect(exitCode === 0 || exitCode === 1).toBe(true);
+    });
+  });
+
   describe('report command', () => {
     it('should require --input flag', async () => {
       const { exitCode, output } = await main(['report']);

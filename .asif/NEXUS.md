@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 445 tests, jsdom + @testing-library/react)
+- Vitest (testing, 453 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-23 | Severity-based exit codes (--fail-on flag) for CI pipeline integration. 453 tests, 19 files. |
 | 2026-02-23 | GitHub Action for CI/CD integration (composite action, threshold gate, SARIF upload, example workflow). 445 tests, 19 files. |
 | 2026-02-23 | Red-team prompt template library (15 templates, 5 categories), templates list/scan commands. 415 tests, 18 files. |
 | 2026-02-23 | VS Code extension scaffold: scan-on-save, SARIF→diagnostics, config loading, 2 commands. 386 tests, 17 files. |
@@ -1085,15 +1086,55 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 ### DIRECTIVE-NXTG-20260223-08 — Severity-Based Exit Codes
 **From**: NXTG-AI CoS | **Priority**: P1
-**Injected**: 2026-02-23 04:30 | **Estimate**: M | **Status**: PENDING
+**Injected**: 2026-02-23 04:30 | **Estimate**: M | **Status**: COMPLETED
 
 > **Context**: CI pipelines need deterministic exit codes. Current CLI always returns 0. CI integration requires: 0=clean, 1=findings below threshold, 2=findings at/above threshold. Enables `faultline scan || exit 1` in CI.
 
 **Action Items**:
-1. [ ] Add `--fail-on` flag to `faultline scan` — accepts severity level (critical, high, medium, low)
-2. [ ] Exit code 0: no findings at or above threshold. Exit code 1: findings found at or above threshold.
-3. [ ] Default behavior (no --fail-on): always exit 0 (backwards compatible)
-4. [ ] Tests for each exit code scenario, threshold matching, backwards compatibility — zero regressions
+1. [x] Add `--fail-on` flag to `faultline scan` — accepts severity level (critical, high, medium, low)
+2. [x] Exit code 0: no findings at or above threshold. Exit code 1: findings found at or above threshold.
+3. [x] Default behavior (no --fail-on): always exit 0 (backwards compatible)
+4. [x] Tests for each exit code scenario, threshold matching, backwards compatibility — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> **1. `--fail-on` flag added to `faultline scan`**:
+> - Accepts severity level: `critical`, `high`, `medium`, `low`
+> - Validates input — rejects unknown values with helpful error message
+> - Applied to all 3 scan modes: single file, directory (`--dir`), templates (`--templates`)
+> - Reuses `checkThreshold()` and `countFromScanResult()` from `cli/action.ts` (shared with GitHub Action)
+>
+> **2. Exit code semantics**:
+> - Exit 0: no findings at or above the threshold severity
+> - Exit 1: findings found at or above the threshold severity
+> - Threshold logic: `--fail-on critical` fails only on critical; `--fail-on high` fails on critical or high; etc.
+>
+> **3. Backwards compatible**: without `--fail-on`, all scan commands still exit 0 regardless of findings (existing behavior unchanged)
+>
+> **4. Tests — 8 new in `tests/cli.test.ts`** (`scan --fail-on` describe block):
+> - Backwards compat: exit 0 without `--fail-on` even with PII findings
+> - Clean text: exit 0 with `--fail-on low` when no findings
+> - Critical threshold: exit 1 when SSN/credit card detected (critical severity)
+> - High threshold: exit 1 when email detected (high severity)
+> - Below threshold: exit 0 when email detected but `--fail-on critical` (high < critical)
+> - Invalid value: exit 1 with error message
+> - `--dir` mode: exit 1 when SSN found in directory scan
+> - `--templates` mode: valid exit code (0 or 1)
+>
+> **5. Full suite: 453 tests, 19 files, 0 failures, 1.27s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-09 — Multi-Provider Abstraction Layer
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 04:45 | **Estimate**: M | **Status**: PENDING
+
+> **Context**: Stream B — Faultline Pro (P-08b) must be FM-agnostic. Current implementation uses Gemini only. Abstracting the provider makes Faultline testable against any LLM. This is the foundation for the Pro version.
+
+**Action Items**:
+1. [ ] Create provider abstraction: `LLMProvider` interface with `analyze(prompt, options)` → `ProviderResponse`
+2. [ ] Implement `MockProvider` (already exists — formalize it), `GeminiProvider` (extract from current code)
+3. [ ] Provider selection via `--provider mock|gemini` CLI flag and `.faultlinerc.json` provider field
+4. [ ] Tests for provider interface compliance, provider switching, fallback to mock — zero regressions
 
 **Response** (filled by project team):
 >

@@ -16,6 +16,7 @@ import { listRules, getRule } from '../rules/index.js';
 import { loadConfig, mergeFlags, generateSampleConfig } from './config.js';
 import { startWatch } from './watch.js';
 import { getAllTemplates, getTemplatesByCategories, listCategories, validateCategories, type TemplateCategory } from '../templates/index.js';
+import { checkThreshold, countFromScanResult, type SeverityLevel } from './action.js';
 
 const VERSION = '0.1.0';
 
@@ -23,8 +24,8 @@ function usage(): string {
   return `Faultline CLI v${VERSION}
 
 Usage:
-  faultline scan --input <file> [--provider gemini|claude|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii,bias,toxicity]
-  faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii]
+  faultline scan --input <file> [--provider gemini|claude|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii,bias,toxicity] [--fail-on critical|high|medium|low]
+  faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii] [--fail-on high]
   faultline report --input <results.json> [--output-format json|markdown|html|sarif]
   faultline watch --dir <path> [--provider mock] [--output-format json]   Watch for changes
   faultline scan --templates injection,bias                         Red-team scan with template categories
@@ -172,6 +173,13 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
         }
       }
 
+      // --fail-on threshold (optional — omitted = always exit 0)
+      const failOnFlag = flags['fail-on'] as SeverityLevel | undefined;
+      const validSeverities: SeverityLevel[] = ['critical', 'high', 'medium', 'low'];
+      if (failOnFlag && !validSeverities.includes(failOnFlag)) {
+        return { exitCode: 1, output: `Error: --fail-on must be one of: ${validSeverities.join(', ')}.` };
+      }
+
       // --- Template scan mode ---
       if (templateFlag) {
         const categories = templateFlag.split(',').map((s: string) => s.trim());
@@ -197,13 +205,29 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
           });
         }
 
-        const output = JSON.stringify({
+        const templateOutput = JSON.stringify({
           mode: 'template-scan',
           categories,
           templatesScanned: templates.length,
           results: templateResults,
         }, null, 2);
-        return { exitCode: 0, output };
+
+        if (failOnFlag) {
+          // Aggregate counts across all template results
+          const totalCounts = { findings: 0, critical: 0, high: 0, medium: 0, low: 0 };
+          for (const tr of templateResults) {
+            const c = countFromScanResult(tr.result as unknown as Record<string, unknown>);
+            totalCounts.findings += c.findings;
+            totalCounts.critical += c.critical;
+            totalCounts.high += c.high;
+            totalCounts.medium += c.medium;
+            totalCounts.low += c.low;
+          }
+          const passed = checkThreshold(failOnFlag, totalCounts);
+          return { exitCode: passed ? 0 : 1, output: templateOutput };
+        }
+
+        return { exitCode: 0, output: templateOutput };
       }
 
       // --- Directory/batch mode ---
@@ -227,7 +251,23 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
           return { exitCode: 1, output: `Error: No files found in ${resolvedDir}${globPattern ? ` matching "${globPattern}"` : ''}.` };
         }
 
-        return { exitCode: 0, output: JSON.stringify(batchResult, null, 2) };
+        const batchOutput = JSON.stringify(batchResult, null, 2);
+
+        if (failOnFlag) {
+          const totalCounts = { findings: 0, critical: 0, high: 0, medium: 0, low: 0 };
+          for (const fr of batchResult.results) {
+            const c = countFromScanResult(fr.result as unknown as Record<string, unknown>);
+            totalCounts.findings += c.findings;
+            totalCounts.critical += c.critical;
+            totalCounts.high += c.high;
+            totalCounts.medium += c.medium;
+            totalCounts.low += c.low;
+          }
+          const passed = checkThreshold(failOnFlag, totalCounts);
+          return { exitCode: passed ? 0 : 1, output: batchOutput };
+        }
+
+        return { exitCode: 0, output: batchOutput };
       }
 
       // --- Single file mode ---
@@ -242,7 +282,15 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       }
 
       const result = await scan(text, providerName, minConfidence, ruleNames);
-      return { exitCode: 0, output: renderReportAs(result, outputFormat) };
+      const scanOutput = renderReportAs(result, outputFormat);
+
+      if (failOnFlag) {
+        const counts = countFromScanResult(result as unknown as Record<string, unknown>);
+        const passed = checkThreshold(failOnFlag, counts);
+        return { exitCode: passed ? 0 : 1, output: scanOutput };
+      }
+
+      return { exitCode: 0, output: scanOutput };
     }
 
     case 'report': {
