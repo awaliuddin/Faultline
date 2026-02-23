@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 123 tests, jsdom + @testing-library/react)
+- Vitest (testing, 151 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | EU AI Act compliance module (risk mapping + report generator). Tests expanded to 151 across 8 files. |
 | 2026-02-22 | Claude provider + provider registry added. Tests expanded to 123 across 7 files. |
 | 2026-02-22 | Provider abstraction layer added (LLMProvider interface + GeminiProvider). Tests expanded to 95. |
 | 2026-02-22 | N-08 SHIPPED (73 tests), N-09 SHIPPED (CI workflow). 9 shipped, 0 building, 3 ideas. |
@@ -389,3 +390,51 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - listProviders (2): includes built-ins, returns string array
 >
 > **5. Full suite: 123 tests, 7 files, 0 failures, 529ms.** All API calls mocked. No existing files modified except `providers/index.ts` (barrel export updated).
+
+### DIRECTIVE-NXTG-20260222-05 — EU AI Act Risk Category Mapping
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 00:15 | **Estimate**: M (~20min) | **Status**: COMPLETED
+
+**Context**: EU AI Act enforcement Aug 2026 (6 months). Stream B: "only 18% of enterprises have governance frameworks." Faultline's competitive edge: map AI safety findings to EU AI Act risk categories. No competitor does this.
+
+**Action Items**:
+1. [ ] Create `src/compliance/eu_ai_act.ts`:
+   - Risk categories: Unacceptable, High-Risk, Limited, Minimal (per EU AI Act Articles 5-7)
+   - Mapping function: `mapClaimToRiskCategory(claim: ClaimResult) → RiskLevel`
+   - Each risk level includes: description, required actions, article reference
+2. [ ] Create `src/compliance/report_generator.ts`:
+   - Takes analysis results → generates compliance summary
+   - Output: which EU AI Act articles are triggered, recommended mitigations
+3. [ ] 15+ tests for compliance module (mock claims → verify correct risk mapping)
+4. [ ] Total tests target: 140+. Run full suite, commit, push.
+
+**Constraints**:
+- Risk mappings based on EU AI Act text — be accurate, not approximate
+- This is classification only — do NOT implement remediation actions
+
+**Response** (filled by project team):
+> **Completed 2026-02-22 by Claude (Opus 4.6)**
+>
+> **1. `compliance/eu_ai_act.ts`** (at `compliance/`, not `src/compliance/` — flat project structure):
+> - `EURiskLevel` type: `'unacceptable' | 'high' | 'limited' | 'minimal'`
+> - `EU_RISK_CATEGORIES` constant: all 4 tiers with title, description, article references, required actions
+> - Prohibited patterns (Article 5): social scoring, subliminal manipulation, exploitation of vulnerabilities, mass surveillance, emotion recognition in workplace
+> - High-risk domain patterns (Annex III §1-8): biometrics, critical infrastructure, education, employment, credit scoring, law enforcement, migration, justice, elections
+> - `mapClaimToRiskCategory(claim, verification)` → `ClaimRiskMapping` with risk level, matched patterns, confidence
+>
+> **2. `compliance/report_generator.ts`**:
+> - `generateComplianceReport(claims, verifications, overallRisk)` → `ComplianceReport`
+> - Aggregates: per-tier counts, highest tier, triggered articles (deduplicated), mitigations
+> - Mitigation generation keyed to highest tier (unacceptable → cease deployment, high → risk management, limited → transparency labelling, minimal → voluntary codes)
+>
+> **3. `compliance/index.ts`** — barrel export
+>
+> **4. Tests — 28 new tests in `tests/compliance.test.ts`**:
+> - EU_RISK_CATEGORIES constants (2): tier definitions, articles/actions
+> - Unacceptable risk (3): social scoring, mass surveillance, workplace emotion recognition
+> - High risk (7): biometrics, education, employment, credit scoring, law enforcement, contradicted escalation, supported confidence
+> - Limited risk (4): contradicted generic, mixed generic, confidence levels
+> - Minimal risk (2): supported generic, unverified generic
+> - Report generator (10): structure, tier counting, highest tier, article aggregation, skip unverified, mitigations per tier, empty claims, minimal-only
+>
+> **5. Full suite: 151 tests, 8 files, 0 failures, 580ms.** No existing files modified.
