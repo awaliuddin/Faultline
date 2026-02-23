@@ -15,6 +15,7 @@ import { renderReport, renderReportAs, type OutputFormat } from './report.js';
 import { listRules, getRule } from '../rules/index.js';
 import { loadConfig, mergeFlags, generateSampleConfig } from './config.js';
 import { startWatch } from './watch.js';
+import { getAllTemplates, getTemplatesByCategories, listCategories, validateCategories, type TemplateCategory } from '../templates/index.js';
 
 const VERSION = '0.1.0';
 
@@ -22,13 +23,15 @@ function usage(): string {
   return `Faultline CLI v${VERSION}
 
 Usage:
-  faultline scan --input <file> [--provider gemini|claude|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html] [--rules pii,bias,toxicity]
-  faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html] [--rules pii]
-  faultline report --input <results.json> [--output-format json|markdown|html]
+  faultline scan --input <file> [--provider gemini|claude|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii,bias,toxicity]
+  faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii]
+  faultline report --input <results.json> [--output-format json|markdown|html|sarif]
   faultline watch --dir <path> [--provider mock] [--output-format json]   Watch for changes
-  faultline rules                                                List available rules
-  faultline init                                                 Generate .faultlinerc.json
-  faultline version                                              Print version
+  faultline scan --templates injection,bias                         Red-team scan with template categories
+  faultline templates list [--category injection]                   List red-team prompt templates
+  faultline rules                                                  List available rules
+  faultline init                                                   Generate .faultlinerc.json
+  faultline version                                                Print version
 
 Config:
   Reads .faultlinerc.json from cwd (walks up). CLI flags override config values.
@@ -66,6 +69,38 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       for (const name of rules) {
         const rule = getRule(name);
         lines.push(`  ${rule.id.padEnd(12)} ${rule.name} — ${rule.description}`);
+      }
+      return { exitCode: 0, output: lines.join('\n') };
+    }
+
+    case 'templates': {
+      const subcommand = args[1] || 'list';
+      if (subcommand !== 'list') {
+        return { exitCode: 1, output: `Unknown templates subcommand: ${subcommand}. Usage: faultline templates list [--category <name>]` };
+      }
+
+      const categoryFilter = flags['category'];
+      let templates = getAllTemplates();
+
+      if (categoryFilter) {
+        const unknown = validateCategories([categoryFilter]);
+        if (unknown.length > 0) {
+          return { exitCode: 1, output: `Error: Unknown category "${categoryFilter}". Available: ${listCategories().join(', ')}` };
+        }
+        templates = getTemplatesByCategories([categoryFilter as TemplateCategory]);
+      }
+
+      const lines = [`Red-team prompt templates (${templates.length}):`, ''];
+      const categories = listCategories();
+      for (const cat of categories) {
+        const catTemplates = templates.filter(t => t.category === cat);
+        if (catTemplates.length === 0) continue;
+        lines.push(`  ${cat.toUpperCase()} (${catTemplates.length}):`);
+        for (const t of catTemplates) {
+          const sev = t.severity === 'critical' ? '[!!]' : t.severity === 'high' ? '[!]' : t.severity === 'medium' ? '[?]' : '[--]';
+          lines.push(`    ${sev} ${t.id.padEnd(22)} ${t.prompt_text.substring(0, 70)}${t.prompt_text.length > 70 ? '...' : ''}`);
+        }
+        lines.push('');
       }
       return { exitCode: 0, output: lines.join('\n') };
     }
@@ -111,9 +146,10 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
     case 'scan': {
       const inputPath = flags['input'];
       const dirPath = flags['dir'];
+      const templateFlag = flags['templates'];
 
-      if (!inputPath && !dirPath) {
-        return { exitCode: 1, output: 'Error: --input <file> or --dir <path> is required.\n\n' + usage() };
+      if (!inputPath && !dirPath && !templateFlag) {
+        return { exitCode: 1, output: 'Error: --input <file>, --dir <path>, or --templates <categories> is required.\n\n' + usage() };
       }
 
       // Load config file (walks up from cwd), then merge with CLI flags
@@ -123,8 +159,8 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       if (minConfidence !== undefined && (isNaN(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
         return { exitCode: 1, output: 'Error: --min-confidence must be a number between 0.0 and 1.0.' };
       }
-      if (!['json', 'markdown', 'html'].includes(outputFormat)) {
-        return { exitCode: 1, output: 'Error: --output-format must be json, markdown, or html.' };
+      if (!['json', 'markdown', 'html', 'sarif'].includes(outputFormat)) {
+        return { exitCode: 1, output: 'Error: --output-format must be json, markdown, html, or sarif.' };
       }
 
       if (ruleNames) {
@@ -134,6 +170,40 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
             return { exitCode: 1, output: `Error: Unknown rule "${name}". Available: ${available.join(', ')}` };
           }
         }
+      }
+
+      // --- Template scan mode ---
+      if (templateFlag) {
+        const categories = templateFlag.split(',').map((s: string) => s.trim());
+        const unknown = validateCategories(categories);
+        if (unknown.length > 0) {
+          return { exitCode: 1, output: `Error: Unknown template category "${unknown[0]}". Available: ${listCategories().join(', ')}` };
+        }
+
+        const templates = getTemplatesByCategories(categories as TemplateCategory[]);
+        if (templates.length === 0) {
+          return { exitCode: 1, output: `Error: No templates found for categories: ${categories.join(', ')}` };
+        }
+
+        const templateResults: Array<{ templateId: string; category: string; severity: string; prompt: string; result: import('./scan.js').ScanResult }> = [];
+        for (const tmpl of templates) {
+          const result = await scan(tmpl.prompt_text, providerName, minConfidence, ruleNames);
+          templateResults.push({
+            templateId: tmpl.id,
+            category: tmpl.category,
+            severity: tmpl.severity,
+            prompt: tmpl.prompt_text,
+            result,
+          });
+        }
+
+        const output = JSON.stringify({
+          mode: 'template-scan',
+          categories,
+          templatesScanned: templates.length,
+          results: templateResults,
+        }, null, 2);
+        return { exitCode: 0, output };
       }
 
       // --- Directory/batch mode ---
@@ -189,8 +259,8 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       try {
         const data = JSON.parse(readFileSync(resolved, 'utf-8'));
         const outputFormat = (flags['output-format'] || undefined) as OutputFormat | undefined;
-        if (outputFormat && !['json', 'markdown', 'html'].includes(outputFormat)) {
-          return { exitCode: 1, output: 'Error: --output-format must be json, markdown, or html.' };
+        if (outputFormat && !['json', 'markdown', 'html', 'sarif'].includes(outputFormat)) {
+          return { exitCode: 1, output: 'Error: --output-format must be json, markdown, html, or sarif.' };
         }
         const output = outputFormat ? renderReportAs(data, outputFormat) : renderReport(data);
         return { exitCode: 0, output };

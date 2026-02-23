@@ -1,0 +1,238 @@
+name: 'Faultline Scan'
+description: 'AI Trust & Safety scanner — verify AI claims, assess risk, ensure EU AI Act compliance'
+author: 'Asif Waliuddin'
+
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  provider:
+    description: 'LLM provider to use (mock, gemini, claude)'
+    required: false
+    default: 'mock'
+  templates:
+    description: 'Comma-separated red-team template categories to scan (injection, jailbreak, bias, hallucination, pii-leakage)'
+    required: false
+    default: ''
+  input:
+    description: 'Path to a single file to scan'
+    required: false
+    default: ''
+  dir:
+    description: 'Directory to scan recursively'
+    required: false
+    default: ''
+  threshold:
+    description: 'Maximum allowed severity before failing (critical, high, medium, low). Findings exceeding this level cause a non-zero exit.'
+    required: false
+    default: 'critical'
+  min-confidence:
+    description: 'Minimum confidence score (0.0-1.0) to include findings'
+    required: false
+    default: '0.0'
+  rules:
+    description: 'Comma-separated rule names to run (pii, bias, toxicity)'
+    required: false
+    default: ''
+  output-format:
+    description: 'Output format: json, markdown, html, sarif'
+    required: false
+    default: 'sarif'
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+
+outputs:
+  findings_count:
+    description: 'Total number of findings'
+    value: ${{ steps.scan.outputs.findings_count }}
+  critical_count:
+    description: 'Number of critical-severity findings'
+    value: ${{ steps.scan.outputs.critical_count }}
+  high_count:
+    description: 'Number of high-severity findings'
+    value: ${{ steps.scan.outputs.high_count }}
+  passed:
+    description: 'Whether the scan passed the severity threshold (true/false)'
+    value: ${{ steps.threshold.outputs.passed }}
+  report:
+    description: 'Path to the generated report file'
+    value: ${{ steps.scan.outputs.report_path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install Faultline
+      shell: bash
+      run: |
+        npm install -g @nxtg-ai/faultline || {
+          echo "::notice::@nxtg-ai/faultline not published yet, installing from source"
+          cd ${{ github.action_path }}/../../..
+          npm ci
+        }
+
+    - name: Run Faultline Scan
+      id: scan
+      shell: bash
+      run: |
+        REPORT_PATH="${RUNNER_TEMP}/faultline-report.${{ inputs.output-format == 'sarif' && 'sarif.json' || inputs.output-format == 'html' && 'html' || inputs.output-format == 'markdown' && 'md' || 'json' }}"
+
+        # Build command args
+        ARGS=""
+
+        if [ -n "${{ inputs.templates }}" ]; then
+          ARGS="scan --templates ${{ inputs.templates }}"
+        elif [ -n "${{ inputs.dir }}" ]; then
+          ARGS="scan --dir ${{ inputs.dir }}"
+        elif [ -n "${{ inputs.input }}" ]; then
+          ARGS="scan --input ${{ inputs.input }}"
+        else
+          echo "::error::One of 'input', 'dir', or 'templates' must be specified"
+          exit 1
+        fi
+
+        ARGS="$ARGS --provider ${{ inputs.provider }}"
+        ARGS="$ARGS --output-format ${{ inputs.output-format }}"
+
+        if [ "${{ inputs.min-confidence }}" != "0.0" ]; then
+          ARGS="$ARGS --min-confidence ${{ inputs.min-confidence }}"
+        fi
+
+        if [ -n "${{ inputs.rules }}" ]; then
+          ARGS="$ARGS --rules ${{ inputs.rules }}"
+        fi
+
+        echo "::group::Faultline scan"
+        echo "Running: faultline $ARGS"
+
+        # Run scan, capture output
+        if command -v faultline &> /dev/null; then
+          faultline $ARGS > "$REPORT_PATH" 2>&1 || true
+        else
+          node ${{ github.action_path }}/../../../bin/faultline.js $ARGS > "$REPORT_PATH" 2>&1 || true
+        fi
+        echo "::endgroup::"
+
+        echo "report_path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
+        # Parse counts from SARIF or JSON output
+        if [ "${{ inputs.output-format }}" = "sarif" ]; then
+          FINDINGS_COUNT=$(node -e "
+            const fs = require('fs');
+            try {
+              const sarif = JSON.parse(fs.readFileSync('$REPORT_PATH', 'utf-8'));
+              console.log(sarif.runs?.[0]?.results?.length ?? 0);
+            } catch { console.log(0); }
+          ")
+          CRITICAL_COUNT=$(node -e "
+            const fs = require('fs');
+            try {
+              const sarif = JSON.parse(fs.readFileSync('$REPORT_PATH', 'utf-8'));
+              const results = sarif.runs?.[0]?.results ?? [];
+              console.log(results.filter(r => r.level === 'error').length);
+            } catch { console.log(0); }
+          ")
+          HIGH_COUNT=$(node -e "
+            const fs = require('fs');
+            try {
+              const sarif = JSON.parse(fs.readFileSync('$REPORT_PATH', 'utf-8'));
+              const results = sarif.runs?.[0]?.results ?? [];
+              console.log(results.filter(r => r.level === 'error').length);
+            } catch { console.log(0); }
+          ")
+        else
+          FINDINGS_COUNT=$(node -e "
+            const fs = require('fs');
+            try {
+              const data = JSON.parse(fs.readFileSync('$REPORT_PATH', 'utf-8'));
+              const rules = data.ruleFindings?.length ?? 0;
+              const verifs = Object.values(data.verifications ?? {}).filter(v => v.status !== 'supported').length;
+              console.log(rules + verifs);
+            } catch { console.log(0); }
+          ")
+          CRITICAL_COUNT=$(node -e "
+            const fs = require('fs');
+            try {
+              const data = JSON.parse(fs.readFileSync('$REPORT_PATH', 'utf-8'));
+              const rules = (data.ruleFindings ?? []).filter(f => f.severity === 'critical').length;
+              console.log(rules);
+            } catch { console.log(0); }
+          ")
+          HIGH_COUNT=$(node -e "
+            const fs = require('fs');
+            try {
+              const data = JSON.parse(fs.readFileSync('$REPORT_PATH', 'utf-8'));
+              const rules = (data.ruleFindings ?? []).filter(f => f.severity === 'high').length;
+              console.log(rules);
+            } catch { console.log(0); }
+          ")
+        fi
+
+        echo "findings_count=$FINDINGS_COUNT" >> "$GITHUB_OUTPUT"
+        echo "critical_count=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
+        echo "high_count=$HIGH_COUNT" >> "$GITHUB_OUTPUT"
+
+        echo "::notice::Faultline scan complete: $FINDINGS_COUNT findings ($CRITICAL_COUNT critical, $HIGH_COUNT high)"
+
+    - name: Check Threshold
+      id: threshold
+      shell: bash
+      run: |
+        THRESHOLD="${{ inputs.threshold }}"
+        FINDINGS_COUNT="${{ steps.scan.outputs.findings_count }}"
+        CRITICAL_COUNT="${{ steps.scan.outputs.critical_count }}"
+        HIGH_COUNT="${{ steps.scan.outputs.high_count }}"
+
+        # Threshold levels: critical > high > medium > low
+        # "critical" = only fail if critical findings exist
+        # "high"     = fail if critical OR high findings exist
+        # "medium"   = fail if critical, high, or medium findings exist
+        # "low"      = fail if any findings exist
+
+        PASSED="true"
+
+        case "$THRESHOLD" in
+          critical)
+            if [ "$CRITICAL_COUNT" -gt 0 ] 2>/dev/null; then
+              PASSED="false"
+            fi
+            ;;
+          high)
+            FAIL_COUNT=$(( ${CRITICAL_COUNT:-0} + ${HIGH_COUNT:-0} ))
+            if [ "$FAIL_COUNT" -gt 0 ] 2>/dev/null; then
+              PASSED="false"
+            fi
+            ;;
+          medium|low)
+            if [ "${FINDINGS_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+              PASSED="false"
+            fi
+            ;;
+          *)
+            echo "::error::Invalid threshold: $THRESHOLD. Must be critical, high, medium, or low."
+            exit 1
+            ;;
+        esac
+
+        echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+
+        if [ "$PASSED" = "false" ]; then
+          echo "::error::Faultline threshold check FAILED ($THRESHOLD). Found: $FINDINGS_COUNT findings ($CRITICAL_COUNT critical, $HIGH_COUNT high)."
+          exit 1
+        else
+          echo "::notice::Faultline threshold check PASSED ($THRESHOLD). Found: $FINDINGS_COUNT findings."
+        fi
+
+    - name: Upload SARIF (if applicable)
+      if: inputs.output-format == 'sarif' && always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.scan.outputs.report_path }}
+      continue-on-error: true

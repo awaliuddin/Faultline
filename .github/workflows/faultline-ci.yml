@@ -1,0 +1,44 @@
+name: Faultline AI Safety Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  faultline-scan:
+    name: AI Safety Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Example 1: Red-team template scan (no API key needed)
+      - name: Red-team scan (injection + bias)
+        uses: ./.github/actions/faultline-scan
+        with:
+          templates: 'injection,bias'
+          provider: 'mock'
+          threshold: 'high'
+          output-format: 'sarif'
+
+      # Example 2: Scan a specific file
+      - name: Scan sample text
+        if: hashFiles('examples/sample.txt') != ''
+        uses: ./.github/actions/faultline-scan
+        with:
+          input: 'examples/sample.txt'
+          provider: 'mock'
+          threshold: 'critical'
+          rules: 'pii,bias,toxicity'
+
+      # Example 3: Scan a directory
+      - name: Scan examples directory
+        if: hashFiles('examples/') != ''
+        uses: ./.github/actions/faultline-scan
+        with:
+          dir: 'examples'
+          provider: 'mock'
+          threshold: 'critical'
+          output-format: 'json'

@@ -12,6 +12,7 @@
     "compliance/",
     "providers/",
     "rules/",
+    "templates/",
     "types.ts",
     "services/",
     "README.md",

@@ -119,7 +119,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 338 tests, jsdom + @testing-library/react)
+- Vitest (testing, 445 tests, jsdom + @testing-library/react)
 
 ---
 
@@ -137,6 +137,10 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-23 | GitHub Action for CI/CD integration (composite action, threshold gate, SARIF upload, example workflow). 445 tests, 19 files. |
+| 2026-02-23 | Red-team prompt template library (15 templates, 5 categories), templates list/scan commands. 415 tests, 18 files. |
+| 2026-02-23 | VS Code extension scaffold: scan-on-save, SARIF→diagnostics, config loading, 2 commands. 386 tests, 17 files. |
+| 2026-02-23 | SARIF 2.1.0 output format (--output-format sarif) with tool info, rule definitions, results with locations/severity/confidence. 358 tests, 16 files. |
 | 2026-02-23 | npm package prep: @nxtg-ai/faultline, bin entry, files array, npm pack validated (24 files, 24.7kB). 338 tests, 16 files. |
 | 2026-02-23 | Watch mode (--dir) with 5s debounce, incremental file scanning, processFileChange/Debouncer. Tests expanded to 338 across 16 files. |
 | 2026-02-23 | Configuration system (.faultlinerc.json) with directory walking, flag precedence, init command. Tests expanded to 318 across 15 files. |
@@ -907,3 +911,189 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - Excludes: tests/, node_modules/, .github/, .asif/, docs/, examples/ (correct)
 >
 > **5. Full suite: 338 tests, 16 files, 0 failures, 1.14s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-04 — Sarif Output + IDE Integration
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 02:45 | **Estimate**: M | **Status**: COMPLETED
+
+**Action Items**:
+1. [x] Add `--output-format sarif` — generates SARIF 2.1.0 compliant output
+2. [x] SARIF includes: tool info, rules definitions, results with locations (file, line, column), severity, confidence
+3. [x] Verify SARIF validates against schema (Microsoft sarif-tools or manual validation)
+4. [x] Tests for SARIF structure, schema compliance — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> **1. `--output-format sarif` added to both `scan` and `report` commands**:
+> - `cli/report.ts` — `OutputFormat` extended with `'sarif'`, new `renderSarifReport()` function
+> - Generates SARIF 2.1.0 JSON with `$schema` pointing to official OASIS SARIF 2.1.0 schema
+> - `cli/index.ts` — format validation updated to accept `sarif` in both scan and report commands
+>
+> **2. SARIF structure includes**:
+> - **tool.driver**: name (Faultline), version (0.1.0), informationUri, rules array
+> - **Rule definitions (11+ rules)**: 4 EU AI Act risk tiers (unacceptable/high/limited/minimal), 3 verification statuses (contradicted/mixed/unverified), dynamic rules for each rule finding (pii-email, bias-gender, etc.)
+> - **Results with locations**: `physicalLocation.artifactLocation.uri`, `region.charOffset` + `region.charLength` for rule findings, `region.startLine` for claim verifications
+> - **Severity mapping**: critical/high → error, medium → warning, low → note, info → none
+> - **Confidence**: per-result `properties.confidence` from claim mappings
+> - **ruleIndex**: each result references its rule definition by index
+> - **Invocations**: execution metadata (provider, overallRisk, euHighestTier, confidenceDistribution)
+> - Results include: verification issues (contradicted/mixed/unverified claims), EU AI Act non-minimal risk mappings, rule findings (PII/bias/toxicity with exact offsets)
+>
+> **3. Schema validation**: SARIF output includes `$schema` URI to OASIS sarif-schema-2.1.0.json. Verified correct structure: `version: "2.1.0"`, single run, tool/driver/rules, results with ruleId/ruleIndex/level/message/locations, invocations. Manual CLI test: `faultline scan --output-format sarif` produces valid SARIF JSON.
+>
+> **4. Tests — 20 new tests**:
+> - CLI integration (3): scan outputs SARIF, report outputs SARIF, format validation includes sarif
+> - SARIF structure (7): valid JSON, $schema + version, single run, tool.driver fields, rule definitions required fields, EU AI Act tier rules, verification rules
+> - SARIF results (7): results array, no results for supported claims, contradicted → error, mixed → warning, locations with physicalLocation, rule findings with charOffset/charLength, EU AI Act high-risk results
+> - SARIF metadata (3): invocations with execution metadata, ruleIndex references, severity level mapping (critical→error, high→error, medium→warning, low→note)
+>
+> **5. Full suite: 358 tests, 16 files, 0 failures, 1.10s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-05 — VS Code Extension Scaffold
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 03:30 | **Estimate**: M | **Status**: COMPLETED
+
+**Action Items**:
+1. [x] Create `vscode-extension/` directory with extension scaffold (package.json, extension.ts, tsconfig)
+2. [x] Extension reads .faultlinerc.json from workspace, runs `faultline scan` on save
+3. [x] Displays findings as VS Code diagnostics (squiggly underlines with severity)
+4. [x] Tests for extension activation, diagnostic rendering — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> **1. Extension scaffold at `vscode-extension/`**:
+> - `package.json` — VS Code extension manifest: `faultline-vscode`, engine `^1.85.0`, category "Linters", `activationEvents: ["onLanguage:*"]`
+> - `tsconfig.json` — CommonJS output (VS Code requirement), ES2022, strict mode
+> - `src/extension.ts` — activation/deactivation lifecycle, command registration, onDidSaveTextDocument handler
+> - `src/config.ts` — loads VS Code settings + `.faultlinerc.json` fallback
+> - `src/scanner.ts` — spawns `faultline scan --output-format sarif`, captures SARIF output
+> - `src/diagnostics.ts` — SARIF 2.1.0 → VS Code diagnostic conversion (decoupled from vscode module for testability)
+>
+> **2. Config loading + scan-on-save**: VS Code settings > .faultlinerc.json > defaults. `onDidSaveTextDocument` triggers scan when `scanOnSave: true`. `buildScanArgs()` always uses `--output-format sarif`.
+>
+> **3. Diagnostic rendering**: SARIF levels → squiggle severity (error=red, warning=yellow, note=blue, none=dots). 1-based→0-based line conversion. Supports both line/column and charOffset/charLength regions. Rule descriptions appended to messages.
+>
+> **4. Commands**: `faultline.scanFile` (scan active file), `faultline.scanWorkspace` (placeholder).
+>
+> **5. Root `tsconfig.json` updated**: `"exclude": ["vscode-extension"]` (has own tsconfig + @types/vscode).
+>
+> **6. Tests — 28 new in `tests/vscode-extension.test.ts`**: sarifLevelToSeverity (5), parseSarifToDiagnostics (11 incl. end-to-end with real pipeline), loadExtensionConfig (6), buildScanArgs (6).
+>
+> **7. Full suite: 386 tests, 17 files, 0 failures, 1.20s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-06 — Red-Team Prompt Template Library
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 04:00 | **Estimate**: M | **Status**: COMPLETED
+
+> **Context**: Stream B — Promptfoo (30K+ devs) dominates with pre-built red-team templates. EU AI Act (Aug 2026) requires LLM safety testing. Faultline needs a ready-to-use template library to lower adoption friction.
+
+**Action Items**:
+1. [x] Create `templates/` directory with red-team prompt templates organized by category: injection, jailbreak, bias, hallucination, PII-leakage
+2. [x] Each template has: id, category, severity, prompt_text, expected_behavior, tags
+3. [x] `faultline templates list` CLI command — list templates with optional --category filter
+4. [x] `faultline scan --templates injection,bias` — run scan using specific template categories
+5. [x] Tests for template loading, filtering, scan integration — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> Note: Used TypeScript/JSON instead of YAML — no YAML dependency in project, consistent with .faultlinerc.json pattern.
+>
+> **1. `templates/` directory with 15 built-in templates across 5 categories**:
+> - **injection** (3): system prompt extraction, developer mode, indirect translation attack. Severities: critical×2, high×1. Tags: owasp-llm-01.
+> - **jailbreak** (3): evil AI roleplay, fiction-wrapper hacking, DAN persona. Severities: critical×2, high×1.
+> - **bias** (3): gendered job description, ethnic ranking, age discrimination. Severities: high×2, medium×1. Tags: eu-ai-act-annex-iii.
+> - **hallucination** (3): fake journal, fake treaty, fake citations. Severities: high×2, medium×1. Tags: fabrication.
+> - **pii-leakage** (3): personal data request, credit card completion, synthetic PII generation. Severities: critical×2, high×1. Tags: gdpr, eu-ai-act-article-5.
+>
+> **2. Template schema**: `PromptTemplate` interface with `id`, `category` (typed enum), `severity` (typed enum), `prompt_text`, `expected_behavior`, `tags: string[]`.
+>
+> **3. `faultline templates list [--category <name>]`**:
+> - Lists all templates grouped by category with severity icons ([!!]/[!]/[?]/[--])
+> - `--category injection` filters to single category
+> - Unknown category validation with helpful error message
+>
+> **4. `faultline scan --templates injection,bias [--provider mock]`**:
+> - Runs each template's `prompt_text` through the full scan pipeline
+> - Outputs JSON with `mode: "template-scan"`, per-template results with `templateId`, `category`, `severity`, `prompt`, and full `ScanResult`
+> - Validates categories, supports comma-separated list
+> - Works standalone (no `--input` required)
+>
+> **5. Registry API**: `getAllTemplates()`, `getTemplatesByCategory()`, `getTemplatesByCategories()`, `getTemplateById()`, `listCategories()`, `registerTemplate()`, `unregisterTemplate()`, `clearCustomTemplates()`, `validateCategories()`.
+>
+> **6. Tests — 29 new tests across 2 files**:
+> - `tests/templates.test.ts` (20): built-in coverage (6: count, categories, per-category minimum, unique ids, required fields, valid severities), querying (4: by category, by categories, all categories, by id, unknown id), custom registration (5: register, duplicate error, unregister, unknown, clear), validation (3: valid, unknown, all unknown)
+> - `tests/cli.test.ts` (+9): templates list (4: all, filter, unknown category, default subcommand), scan --templates (5: single category, multi category, unknown rejection, metadata in results, no --input required)
+>
+> **7. Full suite: 415 tests, 18 files, 0 failures, 1.16s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-07 — GitHub Action for CI/CD Integration
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 04:15 | **Estimate**: M | **Status**: COMPLETED
+
+> **Context**: Stream B — EU AI Act (Aug 2026) creates compliance demand. GitHub Actions marketplace is primary distribution for developer tools. A pre-built action lowers adoption to "add 3 lines to your CI."
+
+**Action Items**:
+1. [ ] Create `.github/actions/faultline-scan/action.yml` — composite action that installs faultline + runs scan
+2. [ ] Inputs: provider (default: mock), templates (optional), threshold (fail if any finding exceeds severity)
+3. [ ] Outputs: findings_count, critical_count, passed (boolean)
+4. [ ] Example workflow in `.github/workflows/faultline-ci.yml` demonstrating usage
+5. [ ] Tests for action input parsing, threshold logic — zero regressions
+
+**Response** (filled by project team):
+> **Completed 2026-02-23 by Claude (Opus 4.6)**
+>
+> **1. `.github/actions/faultline-scan/action.yml` — composite GitHub Action**:
+> - Installs Faultline (npm global or from source fallback)
+> - Runs scan with configurable inputs: `provider`, `templates`, `input`, `dir`, `threshold`, `min-confidence`, `rules`, `output-format`, `node-version`
+> - Parses output to extract finding counts (SARIF and JSON formats)
+> - Threshold gate: `critical` (default), `high`, `medium`, `low` — fails the step if findings exceed threshold
+> - Auto-uploads SARIF to GitHub Code Scanning (via `github/codeql-action/upload-sarif@v3`)
+> - Outputs: `findings_count`, `critical_count`, `high_count`, `passed` (boolean), `report` (file path)
+> - Branding: shield icon, red color (for GitHub Marketplace listing)
+>
+> **2. Action inputs with threshold semantics**:
+> - `threshold: critical` — fail only if critical findings exist
+> - `threshold: high` — fail if critical OR high findings exist
+> - `threshold: medium` — fail if critical, high, or medium findings exist
+> - `threshold: low` — fail if any findings exist
+>
+> **3. Outputs: `findings_count`, `critical_count`, `passed`** — all extracted from scan output via Node.js inline scripts
+>
+> **4. `.github/workflows/faultline-ci.yml` — example workflow** demonstrating 3 usage patterns:
+> - Red-team template scan (`templates: injection,bias`, threshold: high)
+> - Single file scan (`input: examples/sample.txt`, threshold: critical, rules: pii,bias,toxicity)
+> - Directory scan (`dir: examples`, threshold: critical, output-format: json)
+>
+> **5. `cli/action.ts` — testable TypeScript module for action logic**:
+> - `parseActionInputs()` — validates and defaults all action inputs
+> - `checkThreshold()` — severity-level threshold gate logic
+> - `buildCliArgs()` — converts action inputs to CLI args
+> - `countFromSarif()` — extracts counts from SARIF output
+> - `countFromScanResult()` — extracts counts from JSON scan output
+>
+> **6. Tests — 30 new in `tests/action.test.ts`**:
+> - parseActionInputs (9): defaults, all inputs, input/dir targets, missing target, invalid threshold, invalid confidence (NaN + range), invalid format
+> - checkThreshold (5): zero findings pass, critical-only, high-or-critical, medium+, any findings
+> - buildCliArgs (5): template/dir/file modes, omit zero confidence, omit empty rules
+> - countFromSarif (4): empty, by level, missing runs, missing results
+> - countFromScanResult (6): clean, by severity, non-supported verifications, combined, missing fields
+>
+> **7. Full suite: 445 tests, 19 files, 0 failures, 1.24s.** Typecheck clean. Zero regressions.
+
+### DIRECTIVE-NXTG-20260223-08 — Severity-Based Exit Codes
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 04:30 | **Estimate**: M | **Status**: PENDING
+
+> **Context**: CI pipelines need deterministic exit codes. Current CLI always returns 0. CI integration requires: 0=clean, 1=findings below threshold, 2=findings at/above threshold. Enables `faultline scan || exit 1` in CI.
+
+**Action Items**:
+1. [ ] Add `--fail-on` flag to `faultline scan` — accepts severity level (critical, high, medium, low)
+2. [ ] Exit code 0: no findings at or above threshold. Exit code 1: findings found at or above threshold.
+3. [ ] Default behavior (no --fail-on): always exit 0 (backwards compatible)
+4. [ ] Tests for each exit code scenario, threshold matching, backwards compatibility — zero regressions
+
+**Response** (filled by project team):
+>

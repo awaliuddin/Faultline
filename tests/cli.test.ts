@@ -151,6 +151,18 @@ describe('CLI: main()', () => {
       expect(output).toContain('</html>');
     });
 
+    it('should output SARIF with --output-format sarif', async () => {
+      const inputFile = join(tmpDir, 'input.txt');
+      writeFileSync(inputFile, 'Water boils at 100 degrees.');
+      const { exitCode, output } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--output-format', 'sarif']);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(output);
+      expect(parsed.version).toBe('2.1.0');
+      expect(parsed.$schema).toContain('sarif');
+      expect(parsed.runs).toHaveLength(1);
+      expect(parsed.runs[0].tool.driver.name).toBe('Faultline');
+    });
+
     it('should reject invalid --output-format', async () => {
       const inputFile = join(tmpDir, 'input.txt');
       writeFileSync(inputFile, 'Test.');
@@ -407,6 +419,86 @@ describe('CLI: main()', () => {
     });
   });
 
+  describe('templates command', () => {
+    it('should list all templates', async () => {
+      const { exitCode, output } = await main(['templates', 'list']);
+      expect(exitCode).toBe(0);
+      expect(output).toContain('Red-team prompt templates');
+      expect(output).toContain('INJECTION');
+      expect(output).toContain('JAILBREAK');
+      expect(output).toContain('BIAS');
+      expect(output).toContain('HALLUCINATION');
+      expect(output).toContain('PII-LEAKAGE');
+    });
+
+    it('should filter by --category', async () => {
+      const { exitCode, output } = await main(['templates', 'list', '--category', 'injection']);
+      expect(exitCode).toBe(0);
+      expect(output).toContain('INJECTION');
+      expect(output).not.toContain('JAILBREAK');
+      expect(output).not.toContain('HALLUCINATION');
+    });
+
+    it('should reject unknown category', async () => {
+      const { exitCode, output } = await main(['templates', 'list', '--category', 'bogus']);
+      expect(exitCode).toBe(1);
+      expect(output).toContain('Unknown category');
+    });
+
+    it('should default to list subcommand', async () => {
+      const { exitCode, output } = await main(['templates']);
+      expect(exitCode).toBe(0);
+      expect(output).toContain('Red-team prompt templates');
+    });
+  });
+
+  describe('scan --templates', () => {
+    it('should scan with template categories', async () => {
+      const { exitCode, output } = await main(['scan', '--templates', 'injection', '--provider', 'mock']);
+      expect(exitCode).toBe(0);
+      const result = JSON.parse(output);
+      expect(result.mode).toBe('template-scan');
+      expect(result.categories).toEqual(['injection']);
+      expect(result.templatesScanned).toBeGreaterThanOrEqual(3);
+      expect(result.results.length).toBe(result.templatesScanned);
+    });
+
+    it('should scan multiple categories', async () => {
+      const { exitCode, output } = await main(['scan', '--templates', 'injection,bias', '--provider', 'mock']);
+      expect(exitCode).toBe(0);
+      const result = JSON.parse(output);
+      expect(result.categories).toEqual(['injection', 'bias']);
+      const cats = new Set(result.results.map((r: { category: string }) => r.category));
+      expect(cats.has('injection')).toBe(true);
+      expect(cats.has('bias')).toBe(true);
+    });
+
+    it('should reject unknown template category', async () => {
+      const { exitCode, output } = await main(['scan', '--templates', 'bogus', '--provider', 'mock']);
+      expect(exitCode).toBe(1);
+      expect(output).toContain('Unknown template category');
+    });
+
+    it('should include template metadata in each result', async () => {
+      const { exitCode, output } = await main(['scan', '--templates', 'pii-leakage', '--provider', 'mock']);
+      expect(exitCode).toBe(0);
+      const result = JSON.parse(output);
+      for (const r of result.results) {
+        expect(r.templateId).toBeDefined();
+        expect(r.category).toBe('pii-leakage');
+        expect(r.severity).toBeDefined();
+        expect(r.prompt).toBeDefined();
+        expect(r.result).toBeDefined();
+        expect(r.result.provider).toBe('Mock Provider');
+      }
+    });
+
+    it('should not require --input when --templates is used', async () => {
+      const { exitCode } = await main(['scan', '--templates', 'bias', '--provider', 'mock']);
+      expect(exitCode).toBe(0);
+    });
+  });
+
   describe('report command', () => {
     it('should require --input flag', async () => {
       const { exitCode, output } = await main(['report']);
@@ -467,6 +559,20 @@ describe('CLI: main()', () => {
       const { exitCode, output } = await main(['report', '--input', resultFile, '--output-format', 'html']);
       expect(exitCode).toBe(0);
       expect(output).toContain('<!DOCTYPE html>');
+    });
+
+    it('should render SARIF report with --output-format sarif', async () => {
+      const inputFile = join(tmpDir, 'input.txt');
+      writeFileSync(inputFile, 'Water boils at 100 degrees.');
+      const scanResult = await main(['scan', '--input', inputFile, '--provider', 'mock']);
+      const resultFile = join(tmpDir, 'results.json');
+      writeFileSync(resultFile, scanResult.output);
+
+      const { exitCode, output } = await main(['report', '--input', resultFile, '--output-format', 'sarif']);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(output);
+      expect(parsed.version).toBe('2.1.0');
+      expect(parsed.runs[0].tool.driver.name).toBe('Faultline');
     });
 
     it('should reject invalid --output-format in report command', async () => {
@@ -750,6 +856,223 @@ describe('CLI: renderReportAs()', () => {
       const output = renderReportAs(mockData, 'html');
       expect(output).toContain('<footer>');
       expect(output).toContain('Faultline');
+    });
+  });
+
+  describe('sarif format', () => {
+    it('should return valid JSON', () => {
+      const output = renderReportAs(mockData, 'sarif');
+      const parsed = JSON.parse(output);
+      expect(parsed).toBeDefined();
+    });
+
+    it('should have SARIF 2.1.0 $schema and version', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(parsed.$schema).toContain('sarif-schema-2.1.0');
+      expect(parsed.version).toBe('2.1.0');
+    });
+
+    it('should have exactly one run', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(parsed.runs).toHaveLength(1);
+    });
+
+    it('should have tool.driver with name and version', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const driver = parsed.runs[0].tool.driver;
+      expect(driver.name).toBe('Faultline');
+      expect(driver.version).toBe('0.1.0');
+      expect(driver.informationUri).toContain('github.com');
+    });
+
+    it('should have rule definitions with required fields', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const rules = parsed.runs[0].tool.driver.rules;
+      expect(rules.length).toBeGreaterThan(0);
+      for (const rule of rules) {
+        expect(rule.id).toBeDefined();
+        expect(rule.shortDescription).toBeDefined();
+        expect(rule.shortDescription.text).toBeDefined();
+        expect(rule.defaultConfiguration).toBeDefined();
+        expect(rule.defaultConfiguration.level).toMatch(/^(error|warning|note|none)$/);
+      }
+    });
+
+    it('should include EU AI Act risk tier rules', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const ruleIds = parsed.runs[0].tool.driver.rules.map((r: { id: string }) => r.id);
+      expect(ruleIds).toContain('faultline/eu-ai-act/unacceptable');
+      expect(ruleIds).toContain('faultline/eu-ai-act/high');
+      expect(ruleIds).toContain('faultline/eu-ai-act/limited');
+      expect(ruleIds).toContain('faultline/eu-ai-act/minimal');
+    });
+
+    it('should include verification rules', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const ruleIds = parsed.runs[0].tool.driver.rules.map((r: { id: string }) => r.id);
+      expect(ruleIds).toContain('faultline/verification/contradicted');
+      expect(ruleIds).toContain('faultline/verification/mixed');
+      expect(ruleIds).toContain('faultline/verification/unverified');
+    });
+
+    it('should have results array', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(Array.isArray(parsed.runs[0].results)).toBe(true);
+    });
+
+    it('should not include results for supported claims', () => {
+      // mockData has only supported claim — no issue results from verification
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const verificationResults = parsed.runs[0].results.filter(
+        (r: { ruleId: string }) => r.ruleId.startsWith('faultline/verification/')
+      );
+      expect(verificationResults).toHaveLength(0);
+    });
+
+    it('should include results for contradicted claims', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Evidence says otherwise.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      const contradicted = parsed.runs[0].results.filter(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/contradicted'
+      );
+      expect(contradicted.length).toBeGreaterThan(0);
+      expect(contradicted[0].level).toBe('error');
+      expect(contradicted[0].message.text).toContain('c1');
+    });
+
+    it('should include results for mixed claims', () => {
+      const dataWithMixed: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'mixed', explanation: 'Conflicting evidence.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithMixed, 'sarif'));
+      const mixed = parsed.runs[0].results.filter(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/mixed'
+      );
+      expect(mixed.length).toBeGreaterThan(0);
+      expect(mixed[0].level).toBe('warning');
+    });
+
+    it('should include results with locations', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      const result = parsed.runs[0].results[0];
+      expect(result.locations).toBeDefined();
+      expect(result.locations[0].physicalLocation).toBeDefined();
+      expect(result.locations[0].physicalLocation.artifactLocation.uri).toBe('input');
+    });
+
+    it('should include rule findings with charOffset and charLength', () => {
+      const dataWithFindings: ScanResult = {
+        ...mockData,
+        ruleFindings: [
+          { ruleId: 'pii-email', severity: 'high', message: 'PII: Email detected', match: 'test@example.com', offset: 42 },
+        ],
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithFindings, 'sarif'));
+      const ruleResults = parsed.runs[0].results.filter(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/rule/pii-email'
+      );
+      expect(ruleResults.length).toBe(1);
+      expect(ruleResults[0].level).toBe('error');
+      expect(ruleResults[0].locations[0].physicalLocation.region.charOffset).toBe(42);
+      expect(ruleResults[0].locations[0].physicalLocation.region.charLength).toBe(16);
+    });
+
+    it('should add rule definitions for custom rule findings', () => {
+      const dataWithFindings: ScanResult = {
+        ...mockData,
+        ruleFindings: [
+          { ruleId: 'pii-email', severity: 'high', message: 'PII: Email detected', match: 'test@example.com', offset: 0 },
+          { ruleId: 'bias-gender', severity: 'medium', message: 'Bias: gender term', match: 'mankind', offset: 10 },
+        ],
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithFindings, 'sarif'));
+      const ruleIds = parsed.runs[0].tool.driver.rules.map((r: { id: string }) => r.id);
+      expect(ruleIds).toContain('faultline/rule/pii-email');
+      expect(ruleIds).toContain('faultline/rule/bias-gender');
+    });
+
+    it('should have invocations with execution metadata', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const invocation = parsed.runs[0].invocations[0];
+      expect(invocation.executionSuccessful).toBe(true);
+      expect(invocation.properties.provider).toBe('Mock Provider');
+      expect(invocation.properties.overallRisk).toBe('low');
+      expect(invocation.properties.euHighestTier).toBe('minimal');
+      expect(invocation.properties.totalClaims).toBe(1);
+      expect(invocation.properties.confidenceDistribution).toBeDefined();
+    });
+
+    it('should include ruleIndex referencing correct rule definition', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      const result = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/contradicted'
+      );
+      expect(result.ruleIndex).toBeGreaterThanOrEqual(0);
+      const rule = parsed.runs[0].tool.driver.rules[result.ruleIndex];
+      expect(rule.id).toBe('faultline/verification/contradicted');
+    });
+
+    it('should map severity levels correctly', () => {
+      const dataWithFindings: ScanResult = {
+        ...mockData,
+        ruleFindings: [
+          { ruleId: 'toxicity-threats', severity: 'critical', message: 'Threat', match: 'kill', offset: 0 },
+          { ruleId: 'pii-email', severity: 'high', message: 'Email', match: 'a@b.c', offset: 5 },
+          { ruleId: 'bias-age', severity: 'medium', message: 'Age', match: 'old', offset: 10 },
+          { ruleId: 'custom-info', severity: 'low', message: 'Info', match: 'x', offset: 15 },
+        ],
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithFindings, 'sarif'));
+      const levels = parsed.runs[0].results
+        .filter((r: { ruleId: string }) => r.ruleId.startsWith('faultline/rule/'))
+        .map((r: { level: string }) => r.level);
+      expect(levels).toContain('error');   // critical + high
+      expect(levels).toContain('warning'); // medium
+      expect(levels).toContain('note');    // low
+    });
+
+    it('should include EU AI Act results for non-minimal mappings', () => {
+      const dataWithHighRisk: ScanResult = {
+        ...mockData,
+        complianceReport: {
+          ...mockData.complianceReport,
+          euRiskSummary: { ...mockData.complianceReport.euRiskSummary, high: 1, highestTier: 'high' },
+          claimMappings: [{
+            claimId: 'c1', claimText: 'Recruitment uses AI', verificationStatus: 'supported',
+            riskLevel: 'high',
+            category: { level: 'high', title: 'High Risk', description: '', articles: ['Article 6'], requiredActions: [] },
+            matchedPatterns: ['employment'], confidence: 'high', confidenceScore: 0.7,
+          }],
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithHighRisk, 'sarif'));
+      const euResults = parsed.runs[0].results.filter(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/eu-ai-act/high'
+      );
+      expect(euResults.length).toBe(1);
+      expect(euResults[0].level).toBe('error');
+      expect(euResults[0].properties.riskLevel).toBe('high');
+      expect(euResults[0].properties.confidence).toBe(0.7);
     });
   });
 });
