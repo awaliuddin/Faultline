@@ -10,4 +10,14 @@ export {
   listRules,
   runAllRules,
   runRules,
+  loadBuiltInYamlRules,
+  loadCustomYamlRules,
 } from './registry.js';
+export {
+  parseYamlRule,
+  validateYamlRule,
+  yamlRuleToRule,
+  loadYamlRulesFromDir,
+  loadYamlRuleFactories,
+} from './engine.js';
+export type { YamlRuleDefinition, YamlPattern } from './engine.js';

@@ -1404,3 +1404,51 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > **Tests**: 656 total (was 624), zero regressions. 49 watch-specific tests across 7 describe blocks:
 > - Debouncer (10), isWatchedFile (13), WATCHED_EXTENSIONS (2), FindingsTracker (8), formatWatchOutput (7), processFileChange (9)
 > - CLI integration tests for watch command: `--dir` required, missing dir, file-not-dir
+
+### DIRECTIVE-NXTG-20260223-16 — Custom Rule Engine (YAML-Defined Rules)
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 12:15 | **Estimate**: M | **Status**: DONE
+
+> **Context**: Stream B: "Enterprise needs custom compliance rules." Different industries have different rules (healthcare=HIPAA, finance=PCI-DSS). A YAML rule engine lets users define custom rules without code changes.
+
+**Action Items**:
+1. [x] Create `rules/engine.ts` — loads YAML rule files from `rules/` directory, matches against scan content
+2. [x] Rule format: `name`, `description`, `severity`, `pattern` (regex or keyword list), `category`, `remediation`
+3. [x] Ship 3 built-in rule files: `pii.yaml` (email, phone, SSN patterns), `bias.yaml` (biased language), `security.yaml` (API keys, credentials)
+4. [x] `faultline rules list` CLI — shows all loaded rules with name, severity, category
+5. [x] Tests: rule loading, pattern matching, YAML parsing, built-in rules, custom rules — 680+ tests, zero regressions. Commit and push.
+
+**Constraints**:
+- Use `js-yaml` for YAML parsing (already in deps or add as dependency)
+- Rules are additive — custom rules supplement built-in, never override
+- Invalid YAML rules log a warning and skip (don't crash)
+
+**Response** (filled by project team):
+> **R32 — 2026-02-23**: YAML rule engine fully implemented. All 5 action items complete.
+>
+> **Engine** (`rules/engine.ts`):
+> - `parseYamlRule()` — parses YAML string via `js-yaml`, validates schema (name, description, severity, category, patterns[])
+> - `validateYamlRule()` — structural validation including regex compilation check; returns error string or null
+> - `yamlRuleToRule()` — converts `YamlRuleDefinition` to `Rule` interface with `check()` method
+> - `loadYamlRulesFromDir()` — loads all `.yaml`/`.yml` files from directory, skips invalid with warning
+> - `loadYamlRuleFactories()` — returns `Record<string, () => Rule>` for registry integration
+>
+> **Rule format**: `name`, `description`, `severity`, `category`, `remediation` (optional), `patterns[]` with per-pattern `name`, `regex`, `severity` (optional override), `message` (optional), `flags` (optional)
+>
+> **Built-in YAML rules** (`rules/yaml/`):
+> - `pii.yaml` — email, phone, SSN patterns (3 patterns)
+> - `bias.yaml` — gender stereotypes, racial generalizations, age bias (3 patterns)
+> - `security.yaml` — API keys, AWS keys, passwords, bearer tokens, private key headers (5 patterns)
+>
+> **Registry integration** (`rules/registry.ts`):
+> - Lazy-loads YAML rules from `rules/yaml/` on first `getRule()`/`listRules()` call
+> - 3-tier lookup: custom > yaml > built-in (additive, YAML never overrides TS built-ins)
+> - `loadCustomYamlRules(dir)` — load additional YAML rules from custom directory
+> - `_resetYamlState()` — test helper
+>
+> **CLI**: `faultline rules` now shows all 6 rules (3 TS + 3 YAML)
+>
+> **Dependencies**: Added `js-yaml` + `@types/js-yaml`
+>
+> **Tests**: 713 total (was 656), zero regressions. 57 YAML-specific tests across 7 describe blocks:
+> - validateYamlRule (21), parseYamlRule (4), yamlRuleToRule (9), loadYamlRulesFromDir (9), loadYamlRuleFactories (2), built-in YAML rules: pii (3) + bias (2) + security (7)
