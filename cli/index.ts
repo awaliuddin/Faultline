@@ -3,21 +3,22 @@
  * Faultline CLI — scan text, generate compliance reports.
  *
  * Usage:
- *   npx tsx cli/index.ts scan --input <file> [--provider gemini|claude|mock]
+ *   npx tsx cli/index.ts scan --input <file> [--provider gemini|claude|openai|mock]
  *   npx tsx cli/index.ts report --input <results.json>
  *   npx tsx cli/index.ts version
  */
 
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { scan, batchScan } from './scan.js';
-import { renderReport, renderReportAs, type OutputFormat } from './report.js';
+import { renderReport, renderReportAs, type OutputFormat, type SarifOptions } from './report.js';
 import { listRules, getRule } from '../rules/index.js';
 import { loadConfig, mergeFlags, generateSampleConfig } from './config.js';
 import { startWatch } from './watch.js';
 import { getAllTemplates, getTemplatesByCategories, listCategories, validateCategories, type TemplateCategory } from '../templates/index.js';
 import { checkThreshold, countFromScanResult, type SeverityLevel } from './action.js';
 import { aggregate, renderAggregatedReport, type AggregateOutputFormat } from './aggregate.js';
+import { saveHistoryEntry, listHistory, analyzeTrend, formatHistoryList, formatTrendAnalysis } from '../history/store.js';
 
 const VERSION = '0.1.0';
 
@@ -25,13 +26,15 @@ function usage(): string {
   return `Faultline CLI v${VERSION}
 
 Usage:
-  faultline scan --input <file> [--provider gemini|claude|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii,bias,toxicity] [--fail-on critical|high|medium|low]
-  faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--rules pii] [--fail-on high]
+  faultline scan --input <file> [--provider gemini|claude|openai|mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--sarif] [--rules pii,bias,toxicity] [--fail-on critical|high|medium|low]
+  faultline scan --dir <path> [--glob "*.txt"] [--provider mock] [--min-confidence 0.0-1.0] [--output-format json|markdown|html|sarif] [--sarif] [--rules pii] [--fail-on high]
   faultline aggregate --dir <path> [--output-format json|markdown|html|sarif]  Aggregate scan results
   faultline report --input <results.json> [--output-format json|markdown|html|sarif]
   faultline watch --dir <path> [--provider mock] [--output-format json]   Watch for changes
   faultline scan --templates injection,bias                         Red-team scan with template categories
   faultline templates list [--category injection]                   List red-team prompt templates
+  faultline history [--all] [--history-dir <path>]                  List past scans
+  faultline trend --file <path> [--history-dir <path>]             Show finding trend for a file
   faultline rules                                                  List available rules
   faultline init                                                   Generate .faultlinerc.json
   faultline version                                                Print version
@@ -42,17 +45,26 @@ Config:
 Environment:
   GEMINI_API_KEY       API key for Gemini provider
   ANTHROPIC_API_KEY    API key for Claude provider
-  FAULTLINE_PROVIDER   Default provider (gemini|claude)`;
+  OPENAI_API_KEY       API key for OpenAI provider
+  FAULTLINE_PROVIDER   Default provider (gemini|claude|openai)`;
 }
+
+// Boolean flags that take no value argument
+const BOOLEAN_FLAGS = new Set(['sarif', 'all']);
 
 function parseArgs(args: string[]): { command: string; flags: Record<string, string> } {
   const command = args[0] || '';
   const flags: Record<string, string> = {};
 
   for (let i = 1; i < args.length; i++) {
-    if (args[i].startsWith('--') && i + 1 < args.length) {
-      flags[args[i].slice(2)] = args[i + 1];
-      i++;
+    if (args[i].startsWith('--')) {
+      const key = args[i].slice(2);
+      if (BOOLEAN_FLAGS.has(key)) {
+        flags[key] = 'true';
+      } else if (i + 1 < args.length) {
+        flags[key] = args[i + 1];
+        i++;
+      }
     }
   }
 
@@ -202,6 +214,23 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       return { exitCode: 0, output: aggOutput };
     }
 
+    case 'history': {
+      const historyDir = flags['history-dir'] || undefined;
+      const showAll = flags['all'] === 'true';
+      const entries = listHistory(historyDir, { all: showAll });
+      return { exitCode: 0, output: formatHistoryList(entries) };
+    }
+
+    case 'trend': {
+      const trendFile = flags['file'];
+      if (!trendFile) {
+        return { exitCode: 1, output: 'Error: --file <path> is required for trend analysis.\n\n' + usage() };
+      }
+      const historyDir = flags['history-dir'] || undefined;
+      const trend = analyzeTrend(trendFile, historyDir);
+      return { exitCode: 0, output: formatTrendAnalysis(trend) };
+    }
+
     case 'scan': {
       const inputPath = flags['input'];
       const dirPath = flags['dir'];
@@ -213,7 +242,13 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
 
       // Load config file (walks up from cwd), then merge with CLI flags
       const config = loadConfig();
-      const { provider: providerName, minConfidence, outputFormat, ruleNames } = mergeFlags(config, flags);
+      let { provider: providerName, minConfidence, outputFormat, ruleNames } = mergeFlags(config, flags);
+
+      // --sarif shorthand: sets format to sarif and writes results.sarif
+      const sarifShorthand = flags['sarif'] === 'true';
+      if (sarifShorthand) {
+        outputFormat = 'sarif';
+      }
 
       if (minConfidence !== undefined && (isNaN(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
         return { exitCode: 1, output: 'Error: --min-confidence must be a number between 0.0 and 1.0.' };
@@ -340,7 +375,18 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       }
 
       const result = await scan(text, providerName, minConfidence, ruleNames);
-      const scanOutput = renderReportAs(result, outputFormat);
+
+      // Save to history
+      const scanHistoryDir = flags['history-dir'] || undefined;
+      saveHistoryEntry(result, inputPath!, scanHistoryDir);
+
+      const sarifOptions: SarifOptions = { inputUri: inputPath! };
+      const scanOutput = renderReportAs(result, outputFormat, sarifOptions);
+
+      // --sarif shorthand: also write results.sarif file
+      if (sarifShorthand) {
+        writeFileSync(resolve('results.sarif'), scanOutput, 'utf-8');
+      }
 
       if (failOnFlag) {
         const counts = countFromScanResult(result as unknown as Record<string, unknown>);

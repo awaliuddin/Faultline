@@ -1452,3 +1452,29 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 >
 > **Tests**: 713 total (was 656), zero regressions. 57 YAML-specific tests across 7 describe blocks:
 > - validateYamlRule (21), parseYamlRule (4), yamlRuleToRule (9), loadYamlRulesFromDir (9), loadYamlRuleFactories (2), built-in YAML rules: pii (3) + bias (2) + security (7)
+
+### DIRECTIVE-NXTG-20260223-17 — Scan History + Trend Analysis
+**From**: NXTG-AI CoS | **Priority**: P1
+**Injected**: 2026-02-23 13:00 | **Estimate**: M | **Status**: COMPLETE
+
+> **Context**: Stream B: "EU AI Act full enforcement August 2026." Enterprises need to prove compliance over time, not just at a point-in-time. Scan history stores every scan result, enabling trend analysis ("are we getting safer?").
+
+**Action Items**:
+1. [x] Create `history/store.ts` — stores scan results as JSON files in `.faultline/history/` with timestamps
+2. [x] `faultline history` CLI — lists past scans (date, file, finding count, score)
+3. [x] `faultline trend <file>` CLI — shows finding count over time for a specific file (improving/degrading)
+4. [x] History entry includes: timestamp, file scanned, provider used, findings array, overall score
+5. [x] Tests: history storage, listing, trend calculation, empty history handling — 763 tests, zero regressions. Commit and push.
+
+**Constraints**:
+- Store in `.faultline/history/` directory (local, no external storage)
+- One JSON file per scan, named `{timestamp}-{hash}.json`
+- `faultline history` shows last 20 by default, `--all` for full list
+
+**Response** (filled by project team):
+> **Delivered 2026-02-23.** Implemented full scan history + trend analysis pipeline:
+>
+> - `history/store.ts`: `saveHistoryEntry()` writes `{timestamp}-{hash}.json` files to `.faultline/history/` (or custom `--history-dir`). `listHistory()` returns last 20 by default, `--all` for full list, sorted descending. `analyzeTrend()` computes `improving / degrading / stable / insufficient-data` based on finding delta between first and last scan for a file.
+> - **CLI integration**: `faultline scan` now auto-saves to history on every single-file scan. `faultline history [--all] [--history-dir <path>]` lists with date/file/findings/risk table. `faultline trend --file <path> [--history-dir <path>]` shows bar-chart timeline and direction arrow.
+> - **Tests**: 763 total (was 713). 50 new tests across 7 describe blocks covering `saveHistoryEntry`, `listHistory`, `analyzeTrend`, `formatHistoryList`, `formatTrendAnalysis`, CLI history command, CLI trend command, and integration. Zero regressions.
+> - **Design note**: Added `process.hrtime.bigint()` nonce to filename hash to prevent collisions on sub-millisecond saves.
