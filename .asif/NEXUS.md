@@ -21,7 +21,7 @@
 | N-09 | CI/CD Pipeline | — | SHIPPED | P0 | 2026-02 |
 | N-10 | Claim Graph Visualization | FORENSIC | IDEA | P1 | — |
 | N-11 | Multimodal Upload (PDF/OCR) | MULTIMODAL | IDEA | P1 | — |
-| N-12 | Weakest-Link Detection | FORENSIC | IDEA | P1 | — |
+| N-12 | Weakest-Link Detection | FORENSIC | SHIPPED | P1 | 2026-02 |
 
 ---
 
@@ -1478,3 +1478,32 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - **CLI integration**: `faultline scan` now auto-saves to history on every single-file scan. `faultline history [--all] [--history-dir <path>]` lists with date/file/findings/risk table. `faultline trend --file <path> [--history-dir <path>]` shows bar-chart timeline and direction arrow.
 > - **Tests**: 763 total (was 713). 50 new tests across 7 describe blocks covering `saveHistoryEntry`, `listHistory`, `analyzeTrend`, `formatHistoryList`, `formatTrendAnalysis`, CLI history command, CLI trend command, and integration. Zero regressions.
 > - **Design note**: Added `process.hrtime.bigint()` nonce to filename hash to prevent collisions on sub-millisecond saves.
+
+---
+
+### DIRECTIVE-NXTG-20260224-01 — Weakest-Link Detection (N-12)
+**From**: Project Team (self-directed) | **Priority**: P1
+**Injected**: 2026-02-24 09:25 | **Estimate**: M | **Status**: COMPLETE
+
+> **Context**: No CoS directives were pending. N-12 (Weakest-Link Detection) is the highest-value open IDEA in the FORENSIC pillar. Stream B: EU AI Act full enforcement August 2026 — auditors need to know *which specific claim* most undermines an argument's reliability, not just an aggregate risk score. This feature surfaces that directly.
+
+**Action Items**:
+1. [x] Create `analysis/weakest-link.ts` — pure fragility scoring: `fragilityScore = (verdictScore * 0.6 + uncertaintyScore * 0.4) * importanceFactor`; exports `analyzeWeakestLinks()` and `VERDICT_SCORES`
+2. [x] Create `cli/weakest.ts` — ASCII formatter for `WeakestLinkAnalysis`; fragility bars, strength icons, `<< WEAKEST LINK` label
+3. [x] Modify `cli/index.ts` — add `weakest` command: `faultline weakest --input <file> [--provider mock] [--top N]`
+4. [x] Create `tests/weakest-link.test.ts` — 31 tests across 9 describe blocks; zero regressions
+5. [x] Full suite passes. Update N-12 IDEA → SHIPPED. Commit and push.
+
+**Constraints**:
+- Pure computation — no I/O in analysis module
+- ASCII only — no ANSI color codes
+- `--top N` controls how many claims appear in output (default 5)
+
+**Response** (filled by project team):
+> **Delivered 2026-02-24.** Weakest-Link Detection fully implemented (N-12 → SHIPPED):
+>
+> - **`analysis/weakest-link.ts`**: `analyzeWeakestLinks(claims, verifications, complianceReport)` computes per-claim fragility using `fragilityScore = (verdictScore × 0.6 + uncertaintyScore × 0.4) × (importance/5)`. Verdict scores: `contradicted=1.0, mixed=0.6, unverified=0.4, supported=0.0`. Confidence from `complianceReport.claimMappings`, default 0.5. Argument strength thresholds: `critical≥0.7, fragile≥0.45, stable≥0.2, resilient<0.2`.
+> - **`cli/weakest.ts`**: Pure formatter. ASCII fragility bars `[████████░░]`, strength icons `[OK]/[~~]/[!]/[!!]`, status icons `[X]/[?]/[v]`. `<< WEAKEST LINK` labels first ranked claim.
+> - **CLI**: `faultline weakest --input <file> [--provider mock] [--top N]` added to `cli/index.ts`. Reads file, runs scan, calls `analyzeWeakestLinks`, formats and returns.
+> - **Tests**: 794 total (was 763). 31 new tests across 9 describe blocks: VERDICT_SCORES, empty inputs, sorting, confidenceScore fallback, argumentStrength thresholds, strengthScore, summary, fragilityReason, claims-without-verifications exclusion. Zero regressions.
+> - Files: `analysis/weakest-link.ts` (new), `cli/weakest.ts` (new), `cli/index.ts` (modified), `tests/weakest-link.test.ts` (new).

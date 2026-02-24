@@ -19,6 +19,8 @@ import { getAllTemplates, getTemplatesByCategories, listCategories, validateCate
 import { checkThreshold, countFromScanResult, type SeverityLevel } from './action.js';
 import { aggregate, renderAggregatedReport, type AggregateOutputFormat } from './aggregate.js';
 import { saveHistoryEntry, listHistory, analyzeTrend, formatHistoryList, formatTrendAnalysis } from '../history/store.js';
+import { analyzeWeakestLinks } from '../analysis/weakest-link.js';
+import { formatWeakestLinkAnalysis } from './weakest.js';
 
 const VERSION = '0.1.0';
 
@@ -35,6 +37,7 @@ Usage:
   faultline templates list [--category injection]                   List red-team prompt templates
   faultline history [--all] [--history-dir <path>]                  List past scans
   faultline trend --file <path> [--history-dir <path>]             Show finding trend for a file
+  faultline weakest --input <file> [--provider mock] [--top N]         Identify the weakest-link claim
   faultline rules                                                  List available rules
   faultline init                                                   Generate .faultlinerc.json
   faultline version                                                Print version
@@ -229,6 +232,32 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       const historyDir = flags['history-dir'] || undefined;
       const trend = analyzeTrend(trendFile, historyDir);
       return { exitCode: 0, output: formatTrendAnalysis(trend) };
+    }
+
+    case 'weakest': {
+      const inputPath = flags['input'];
+      if (!inputPath) {
+        return { exitCode: 1, output: 'Error: --input <file> is required for weakest-link analysis.\n\n' + usage() };
+      }
+
+      const resolvedWeak = resolve(inputPath);
+      if (!existsSync(resolvedWeak)) {
+        return { exitCode: 1, output: `Error: File not found: ${resolvedWeak}` };
+      }
+
+      const weakText = readFileSync(resolvedWeak, 'utf-8').trim();
+      if (!weakText) {
+        return { exitCode: 1, output: 'Error: Input file is empty.' };
+      }
+
+      const weakConfig = loadConfig();
+      const { provider: weakProvider, minConfidence: weakMinConf } = mergeFlags(weakConfig, flags);
+
+      const weakResult = await scan(weakText, weakProvider, weakMinConf);
+      const topN = flags['top'] ? parseInt(flags['top'], 10) : 5;
+      const weakAnalysis = analyzeWeakestLinks(weakResult.claims, weakResult.verifications, weakResult.complianceReport);
+
+      return { exitCode: 0, output: formatWeakestLinkAnalysis(weakAnalysis, isNaN(topN) ? 5 : topN) };
     }
 
     case 'scan': {
