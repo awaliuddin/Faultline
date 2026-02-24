@@ -83,7 +83,8 @@ interface LLMProvider {
 ### Implementations
 
 - **GeminiProvider** — Thin adapter over `services/geminiService.ts`. Uses `@google/genai` SDK with JSON schema enforcement and Google Search grounding.
-- **ClaudeProvider** — Direct `fetch` calls to the Anthropic Messages API. No SDK dependency. Parses JSON from model responses with markdown-aware extraction.
+- **ClaudeProvider** — Direct `fetch` calls to the Anthropic Messages API (`/v1/messages`). No SDK dependency. Parses JSON from model responses with markdown-aware extraction. Default model: `claude-sonnet-4-20250514` (configurable via `FAULTLINE_CLAUDE_MODEL`).
+- **OpenAIProvider** — Direct `fetch` calls to the OpenAI Chat Completions API with `response_format: { type: "json_object" }`. Default model: `gpt-4o` (configurable via `FAULTLINE_OPENAI_MODEL`).
 
 ### Registry
 
@@ -94,9 +95,11 @@ import { getProvider } from './providers';
 const provider = getProvider('api-key');
 
 // Explicit selection
-const claude = getProvider('api-key', 'claude');
+const claude   = getProvider('api-key', 'claude');
+const openai   = getProvider('api-key', 'openai');
+const mock     = getProvider('',        'mock');   // no API key needed
 
-// Environment variable: FAULTLINE_PROVIDER=claude
+// Environment variable: FAULTLINE_PROVIDER=claude|openai|gemini
 const envProvider = getProvider('api-key');
 ```
 
@@ -144,10 +147,47 @@ Every stage fails gracefully:
 | Risk Scoring | No verifications | Return `"low"` |
 | Compliance | No claims | Report with "No verified claims" mitigation |
 
+## CLI Layer
+
+The `cli/` directory adds a full command-line interface on top of the core pipeline:
+
+| Command | Description |
+|---------|-------------|
+| `faultline scan --input <file>` | Run full pipeline; output JSON/Markdown/HTML/SARIF |
+| `faultline scan --dir <path>` | Batch scan all files in a directory |
+| `faultline weakest --input <file>` | Identify the most fragile claim by fragility score |
+| `faultline graph --input <file> --format mermaid\|dot` | Export claim graph grouped by EU risk tier |
+| `faultline watch --dir <path>` | Re-scan on file save with 500ms debounce |
+| `faultline history` | List past scans from `.faultline/history/` |
+| `faultline trend --file <path>` | Show finding count trajectory (improving/degrading) |
+| `faultline aggregate --dir <path>` | Multi-file risk heatmap and summary |
+| `faultline rules` | List all detection rules (built-in + YAML) |
+| `faultline templates list` | List red-team prompt templates |
+
+## Rules Engine
+
+`rules/` provides a content-based detection layer that runs in parallel with LLM verification:
+
+- **Built-in TypeScript rules**: PII detection, bias detection, security credential detection
+- **YAML rule engine**: Custom rules from `.yaml` files; supports regex patterns with per-pattern severity overrides
+- **Built-in YAML rules**: `pii.yaml` (email/phone/SSN), `bias.yaml` (gender/racial/age), `security.yaml` (API keys/credentials)
+- Rules are additive — custom rules supplement built-in, never override
+
+## Analysis Modules
+
+`analysis/` contains pure-computation modules with no I/O:
+
+- **`weakest-link.ts`**: Per-claim fragility = `(verdictScore × 0.6 + uncertaintyScore × 0.4) × (importance/5)`. Classifies argument strength as resilient/stable/fragile/critical.
+- **`claim-graph.ts`**: Maps claims to nodes grouped by EU risk tier; renders Mermaid `graph TD` and Graphviz DOT output.
+
+## Scan History
+
+`history/store.ts` saves every scan result to `.faultline/history/{timestamp}-{hash}.json`. `analyzeTrend()` compares first and last scan per file to report improving/degrading/stable direction.
+
 ## Test Architecture
 
-164 tests across 10 files:
+829 tests across 27 files:
 
-- **Unit tests**: types, geminiService, app logic, provider implementations, compliance mapping
-- **Integration tests**: full pipeline (extract → score → map → report), multi-provider shape validation
-- **All API calls mocked** — tests run offline in ~600ms
+- **Unit tests**: types, geminiService, app logic, provider implementations (Gemini/Claude/OpenAI), compliance mapping, rules engine, weakest-link algorithm, claim graph rendering, scan history
+- **Integration tests**: full pipeline (extract → score → map → report), multi-provider shape parity, confidence calibration, report aggregation
+- **All API calls mocked** — tests run offline in ~1.2s
