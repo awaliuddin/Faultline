@@ -3,7 +3,7 @@
 **AI Trust & Safety Platform — Verify AI claims, assess risk, ensure EU AI Act compliance.**
 
 [![CI](https://github.com/awaliuddin/Faultline/actions/workflows/ci.yml/badge.svg)](https://github.com/awaliuddin/Faultline/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-547%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-829%20passing-brightgreen)](tests/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-CC%20BY%204.0-green.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Kaggle](https://img.shields.io/badge/Kaggle-Competition%20Entry-20BEFF.svg)](https://www.kaggle.com/competitions/gemini-3/writeups/faultline-seismic-stress-testing-for-ai-hallucina)
@@ -16,16 +16,29 @@ Faultline decomposes AI-generated text into atomic claims, stress-tests each aga
 
 ## Quick Start
 
+### Web App (React UI)
+
 ```bash
 git clone https://github.com/awaliuddin/Faultline.git && cd Faultline
 npm install
-npm run dev
+npm run dev        # opens browser UI at localhost:5173
 ```
 
-Set your API key in the browser UI or via environment variable:
+### CLI
 
 ```bash
-export GEMINI_API_KEY="your-key"
+npm install
+export GEMINI_API_KEY="your-key"   # or ANTHROPIC_API_KEY / OPENAI_API_KEY
+
+npx tsx cli/index.ts scan --input document.txt --provider gemini
+npx tsx cli/index.ts scan --input document.txt --provider claude --output-format markdown
+npx tsx cli/index.ts scan --input document.txt --sarif              # writes results.sarif
+npx tsx cli/index.ts weakest --input document.txt                   # weakest-link claim
+npx tsx cli/index.ts graph --input document.txt --format mermaid    # claim graph
+npx tsx cli/index.ts history                                         # past scan history
+npx tsx cli/index.ts trend --file document.txt                      # finding trend
+npx tsx cli/index.ts watch --dir ./src --provider mock              # watch mode
+npx tsx cli/index.ts rules                                           # list detection rules
 ```
 
 Run tests:
@@ -43,7 +56,7 @@ Input Text
   │
   ▼
 ┌─────────────────────────┐
-│  LLM Provider           │  Gemini (default) or Claude
+│  LLM Provider           │  Gemini, Claude, or OpenAI
 │  extractClaims()        │  → Claim[] (id, text, type, importance)
 └──────────┬──────────────┘
            ▼
@@ -72,31 +85,54 @@ Input Text
 
 ## Features
 
-- **Multi-provider architecture** — `LLMProvider` interface with Gemini and Claude implementations. Add new providers by implementing 3 methods.
+- **Multi-provider architecture** — `LLMProvider` interface with Gemini, Claude (Anthropic), and OpenAI implementations. Add new providers by implementing 3 methods.
 - **Claim forensics** — Atomic decomposition into fact/opinion/interpretation with importance scoring (1-5).
 - **Web-grounded verification** — Google Search tool for live evidence. Verdicts: supported, contradicted, mixed, unverified.
 - **EU AI Act compliance** — Risk category mapping per Articles 5-7 and Annex III. Prohibited practice detection, high-risk domain matching, transparency obligations.
-- **Compliance reports** — Triggered articles, per-tier counts, recommended mitigations.
-- **164 tests** — Unit, integration, and full pipeline tests. All API calls mocked. CI via GitHub Actions.
+- **Weakest-link detection** — Per-claim fragility scoring; identifies the claim that most undermines argument integrity.
+- **Claim graph export** — Mermaid and Graphviz DOT visualizations grouping claims by EU risk tier.
+- **SARIF output** — VS Code / GitHub Code Scanning integration with `relatedLocations`, `uriBaseId`, and `codeFlows`.
+- **Scan history + trend analysis** — Local `.faultline/history/` store; `faultline trend` shows improving/degrading direction over time.
+- **Watch mode** — `faultline watch --dir` re-scans on file save with 500ms debounce and new/resolved diff highlights.
+- **YAML rule engine** — Custom compliance rules in YAML; built-in PII, bias, and security rule sets.
+- **829 tests** — Unit, integration, and full pipeline tests across 27 files. All API calls mocked. CI via GitHub Actions.
 
 ---
 
 ## Project Structure
 
 ```
-├── services/geminiService.ts   # Core LLM logic (extraction, verification, critique)
+├── cli/
+│   ├── index.ts                # CLI entry point (15+ commands)
+│   ├── scan.ts                 # Core scan pipeline
+│   ├── report.ts               # Multi-format output (JSON/Markdown/HTML/SARIF)
+│   ├── watch.ts                # File-watch mode with debounce + diff
+│   ├── weakest.ts              # Weakest-link formatter
+│   └── aggregate.ts            # Multi-file report aggregation
+├── analysis/
+│   ├── weakest-link.ts         # Fragility scoring algorithm
+│   └── claim-graph.ts          # Claim graph (Mermaid + DOT)
 ├── providers/
 │   ├── base_provider.ts        # LLMProvider interface
 │   ├── gemini_provider.ts      # Google Gemini adapter
 │   ├── claude_provider.ts      # Anthropic Claude adapter
+│   ├── openai_provider.ts      # OpenAI adapter
 │   └── registry.ts             # Provider lookup (env-configurable)
 ├── compliance/
-│   ├── eu_ai_act.ts            # Risk categories + claim-to-tier mapping
+│   ├── eu_ai_act.ts            # EU AI Act risk categories (Articles 5-7, Annex III)
 │   └── report_generator.ts     # Compliance report aggregation
-├── App.tsx                     # Pipeline orchestration + UI state
+├── rules/
+│   ├── base_rule.ts            # Rule + Finding interfaces
+│   ├── registry.ts             # Rule registry with YAML loader
+│   └── yaml/                   # Built-in YAML rules (pii, bias, security)
+├── history/
+│   └── store.ts                # Scan history storage + trend analysis
+├── templates/                  # Red-team prompt template library
+├── services/geminiService.ts   # React app LLM logic (web UI only)
+├── App.tsx                     # React pipeline orchestration + UI state
 ├── components/                 # Dashboard, charts, tour
 ├── types.ts                    # Claim, VerificationResult, AnalysisState
-└── tests/                      # 164 tests across 10 files
+└── tests/                      # 829 tests across 27 files
 ```
 
 ---
@@ -105,9 +141,10 @@ Input Text
 
 | Layer | Technology |
 |-------|-----------|
-| AI | Gemini 3 Pro (`@google/genai`), Claude (Anthropic Messages API) |
+| AI | Gemini 3 Pro (`@google/genai`), Claude (Anthropic API), OpenAI (`gpt-4o`) |
 | Grounding | Google Custom Search API |
 | Frontend | React 19, TypeScript, Tailwind CSS, Vite |
+| CLI | `tsx`, `js-yaml`, Node.js built-ins (no runtime deps) |
 | Backend | Express.js (optional API key proxy) |
 | Testing | Vitest, jsdom, @testing-library/react |
 | CI | GitHub Actions (Node 20) |
@@ -133,7 +170,7 @@ const provider = getProvider('your-api-key', 'claude');
 
 ## Origin
 
-Kaggle competition entry ([Gemini 3 competition](https://www.kaggle.com/competitions/gemini-3)). An FM-agnostic version with extended provider support exists as a separate project (Faultline Pro).
+Started as a Kaggle competition entry ([Gemini 3 competition](https://www.kaggle.com/competitions/gemini-3)). The project has since grown into a full CLI tool and multi-provider platform supporting Gemini, Claude, and OpenAI.
 
 ---
 

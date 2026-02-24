@@ -327,6 +327,17 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: The package is ready functionally. Pre-publish checklist suggestion: (1) run `npm pack --dry-run` to verify included files, (2) verify `npx @nxtg-ai/faultline scan --help` works end-to-end with real providers, (3) tag v0.1.0 release on GitHub, (4) publish. Could be done in one session.
 
+---
+
+### TQ-005 — README was significantly stale; updated this session (2026-02-24)
+**From**: Project Team
+
+**Observation**: README had 7 stale areas: (1) test badge showed 547 (actual: 829), (2) no CLI Quick Start section despite 15+ CLI commands, (3) architecture diagram said "Gemini or Claude" (OpenAI missing), (4) Features section listed 164 tests and missing 6 new capabilities, (5) Project Structure missing `cli/`, `analysis/`, `history/`, `rules/`, `templates/` modules, (6) Tech Stack missing OpenAI and CLI tooling, (7) Origin section mentioned "FM-agnostic version in Faultline Pro" as if it doesn't exist here — it does now.
+
+**Action taken**: Fixed all 7 items directly in this session. No CoS action needed.
+
+**Question for CoS**: Should README version cadence be formalized? Suggest the team updates the test badge and features list as part of every directive's definition-of-done going forward.
+
 ### DIRECTIVE-NXTG-20260222-02 — Test Bootstrap + CI Pipeline
 **From**: NXTG-AI CoS | **Priority**: P0
 **Injected**: 2026-02-22 22:00 | **Estimate**: L (~45min) | **Status**: COMPLETED
