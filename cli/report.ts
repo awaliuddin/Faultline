@@ -6,7 +6,7 @@ export type OutputFormat = 'json' | 'markdown' | 'html' | 'sarif';
 /**
  * Render a report in the specified format.
  */
-export function renderReportAs(data: ScanResult, format: OutputFormat): string {
+export function renderReportAs(data: ScanResult, format: OutputFormat, sarifOptions?: SarifOptions): string {
   switch (format) {
     case 'json':
       return JSON.stringify(data, null, 2);
@@ -15,7 +15,7 @@ export function renderReportAs(data: ScanResult, format: OutputFormat): string {
     case 'html':
       return renderHtmlReport(data);
     case 'sarif':
-      return renderSarifReport(data);
+      return renderSarifReport(data, sarifOptions);
     default:
       return renderReport(data);
   }
@@ -422,8 +422,14 @@ function riskToSarifLevel(risk: string): SarifLevel {
   }
 }
 
-function renderSarifReport(data: ScanResult): string {
+export interface SarifOptions {
+  /** File path to use in artifactLocation URIs (defaults to 'input'). */
+  inputUri?: string;
+}
+
+function renderSarifReport(data: ScanResult, options?: SarifOptions): string {
   const report = data.complianceReport;
+  const inputUri = options?.inputUri || 'input';
 
   // Build rule definitions
   const ruleDefinitions: Array<{
@@ -521,23 +527,24 @@ function renderSarifReport(data: ScanResult): string {
     }
   }
 
+  // Helper: build an artifactLocation with uriBaseId for VS Code SARIF Viewer
+  function makeArtifactLocation() {
+    return { uri: inputUri, uriBaseId: '%SRCROOT%' };
+  }
+
   // Build results
-  const results: Array<{
-    ruleId: string;
-    ruleIndex: number;
-    level: SarifLevel;
-    message: { text: string };
-    locations?: Array<{
-      physicalLocation?: {
-        artifactLocation: { uri: string };
-        region?: { charOffset?: number; charLength?: number; startLine?: number };
-      };
-    }>;
-    properties?: Record<string, unknown>;
-  }> = [];
+  const results: Array<Record<string, unknown>> = [];
 
   const ruleIndexMap = new Map<string, number>();
   ruleDefinitions.forEach((r, i) => ruleIndexMap.set(r.id, i));
+
+  // Build a confidence score lookup
+  const scoreMap = new Map<string, number>();
+  if (report.claimMappings) {
+    for (const m of report.claimMappings) {
+      scoreMap.set(m.claimId, m.confidenceScore);
+    }
+  }
 
   // Results from claim verifications
   for (const [claimId, vResult] of Object.entries(data.verifications)) {
@@ -549,13 +556,44 @@ function renderSarifReport(data: ScanResult): string {
       : 'faultline/verification/unverified';
 
     const claim = data.claims.find(c => c.id === claimId);
-    const scoreMap = new Map<string, number>();
-    if (report.claimMappings) {
-      for (const m of report.claimMappings) {
-        scoreMap.set(m.claimId, m.confidenceScore);
-      }
-    }
     const confidence = scoreMap.get(claimId);
+
+    // relatedLocations: link back to the claim text in the source
+    const relatedLocations = claim ? [{
+      id: 0,
+      message: { text: `Claim: ${claim.text}` },
+      physicalLocation: {
+        artifactLocation: makeArtifactLocation(),
+        region: { startLine: 1 },
+      },
+    }] : undefined;
+
+    // codeFlows: reasoning chain — claim → verification → finding
+    const codeFlows = claim ? [{
+      message: { text: `Verification chain for ${claimId}` },
+      threadFlows: [{
+        locations: [
+          {
+            location: {
+              message: { text: `Claim extracted: "${claim.text}"` },
+              physicalLocation: {
+                artifactLocation: makeArtifactLocation(),
+                region: { startLine: 1 },
+              },
+            },
+          },
+          {
+            location: {
+              message: { text: `Verification result: ${vResult.status} — ${vResult.explanation}` },
+              physicalLocation: {
+                artifactLocation: makeArtifactLocation(),
+                region: { startLine: 1 },
+              },
+            },
+          },
+        ],
+      }],
+    }] : undefined;
 
     results.push({
       ruleId,
@@ -564,10 +602,12 @@ function renderSarifReport(data: ScanResult): string {
       message: { text: `${claimId}: ${vResult.explanation}` },
       locations: [{
         physicalLocation: {
-          artifactLocation: { uri: 'input' },
+          artifactLocation: makeArtifactLocation(),
           region: { startLine: 1 },
         },
       }],
+      ...(relatedLocations && { relatedLocations }),
+      ...(codeFlows && { codeFlows }),
       properties: {
         claimId,
         claimText: claim?.text,
@@ -582,6 +622,53 @@ function renderSarifReport(data: ScanResult): string {
     if (mapping.riskLevel === 'minimal') continue; // Only report non-trivial risk
 
     const ruleId = `faultline/eu-ai-act/${mapping.riskLevel}`;
+
+    // relatedLocations: link to the original claim
+    const relatedLocations = [{
+      id: 0,
+      message: { text: `Claim: ${mapping.claimText}` },
+      physicalLocation: {
+        artifactLocation: makeArtifactLocation(),
+        region: { startLine: 1 },
+      },
+    }];
+
+    // codeFlows: claim → EU risk assessment → finding
+    const codeFlows = [{
+      message: { text: `EU AI Act risk assessment for ${mapping.claimId}` },
+      threadFlows: [{
+        locations: [
+          {
+            location: {
+              message: { text: `Claim: "${mapping.claimText}"` },
+              physicalLocation: {
+                artifactLocation: makeArtifactLocation(),
+                region: { startLine: 1 },
+              },
+            },
+          },
+          {
+            location: {
+              message: { text: `Matched patterns: ${mapping.matchedPatterns.join(', ')}` },
+              physicalLocation: {
+                artifactLocation: makeArtifactLocation(),
+                region: { startLine: 1 },
+              },
+            },
+          },
+          {
+            location: {
+              message: { text: `EU AI Act risk level: ${mapping.riskLevel}` },
+              physicalLocation: {
+                artifactLocation: makeArtifactLocation(),
+                region: { startLine: 1 },
+              },
+            },
+          },
+        ],
+      }],
+    }];
+
     results.push({
       ruleId,
       ruleIndex: ruleIndexMap.get(ruleId) ?? -1,
@@ -589,10 +676,12 @@ function renderSarifReport(data: ScanResult): string {
       message: { text: `${mapping.claimId}: EU AI Act ${mapping.riskLevel} risk — ${mapping.matchedPatterns.join(', ')}` },
       locations: [{
         physicalLocation: {
-          artifactLocation: { uri: 'input' },
+          artifactLocation: makeArtifactLocation(),
           region: { startLine: 1 },
         },
       }],
+      relatedLocations,
+      codeFlows,
       properties: {
         claimId: mapping.claimId,
         riskLevel: mapping.riskLevel,
@@ -612,7 +701,7 @@ function renderSarifReport(data: ScanResult): string {
       message: { text: f.message },
       locations: [{
         physicalLocation: {
-          artifactLocation: { uri: 'input' },
+          artifactLocation: makeArtifactLocation(),
           region: { charOffset: f.offset, charLength: f.match.length },
         },
       }],
@@ -634,6 +723,9 @@ function renderSarifReport(data: ScanResult): string {
           informationUri: 'https://github.com/awaliuddin/Faultline',
           rules: ruleDefinitions,
         },
+      },
+      originalUriBaseIds: {
+        '%SRCROOT%': { uri: '' },
       },
       results,
       invocations: [{

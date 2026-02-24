@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { writeFileSync, mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -161,6 +161,47 @@ describe('CLI: main()', () => {
       expect(parsed.$schema).toContain('sarif');
       expect(parsed.runs).toHaveLength(1);
       expect(parsed.runs[0].tool.driver.name).toBe('Faultline');
+    });
+
+    it('should output SARIF with --sarif shorthand flag', async () => {
+      const inputFile = join(tmpDir, 'input.txt');
+      writeFileSync(inputFile, 'Water boils at 100 degrees. The sky is blue.');
+      const { exitCode, output } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--sarif']);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(output);
+      expect(parsed.version).toBe('2.1.0');
+      expect(parsed.$schema).toContain('sarif');
+      expect(parsed.runs).toHaveLength(1);
+    });
+
+    it('--sarif flag should write results.sarif file', async () => {
+      const inputFile = join(tmpDir, 'input.txt');
+      writeFileSync(inputFile, 'Water boils at 100 degrees.');
+      // Change cwd to tmpDir so results.sarif is written there
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        const { exitCode } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--sarif']);
+        expect(exitCode).toBe(0);
+        const sarifFile = join(tmpDir, 'results.sarif');
+        expect(existsSync(sarifFile)).toBe(true);
+        const contents = JSON.parse(readFileSync(sarifFile, 'utf-8'));
+        expect(contents.version).toBe('2.1.0');
+      } finally {
+        process.chdir(origCwd);
+      }
+    });
+
+    it('--sarif should use input file path in artifactLocation', async () => {
+      const inputFile = join(tmpDir, 'my-doc.txt');
+      writeFileSync(inputFile, 'Water boils at 100 degrees. The sky is blue.');
+      const { exitCode, output } = await main(['scan', '--input', inputFile, '--provider', 'mock', '--sarif']);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(output);
+      // Check that at least one result location uses the actual input path
+      const run = parsed.runs[0];
+      expect(run.originalUriBaseIds).toBeDefined();
+      expect(run.originalUriBaseIds['%SRCROOT%']).toBeDefined();
     });
 
     it('should reject invalid --output-format', async () => {
@@ -985,6 +1026,32 @@ describe('CLI: renderReportAs()', () => {
       expect(Array.isArray(parsed.runs[0].results)).toBe(true);
     });
 
+    it('should have invocations array in run', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(Array.isArray(parsed.runs[0].invocations)).toBe(true);
+      expect(parsed.runs[0].invocations).toHaveLength(1);
+    });
+
+    it('tool driver should have informationUri', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(parsed.runs[0].tool.driver.informationUri).toContain('github.com');
+    });
+
+    it('each rule should have name property', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      for (const rule of parsed.runs[0].tool.driver.rules) {
+        expect(rule.name).toBeDefined();
+        expect(typeof rule.name).toBe('string');
+        expect(rule.name.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('run should have originalUriBaseIds with %SRCROOT%', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(parsed.runs[0].originalUriBaseIds).toBeDefined();
+      expect(parsed.runs[0].originalUriBaseIds['%SRCROOT%'].uri).toBe('');
+    });
+
     it('should not include results for supported claims', () => {
       // mockData has only supported claim — no issue results from verification
       const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
@@ -1138,6 +1205,263 @@ describe('CLI: renderReportAs()', () => {
       expect(euResults[0].level).toBe('error');
       expect(euResults[0].properties.riskLevel).toBe('high');
       expect(euResults[0].properties.confidence).toBe(0.7);
+    });
+
+    // --- Enhanced SARIF: relatedLocations ---
+
+    it('should include relatedLocations on verification results', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      const result = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/contradicted'
+      );
+      expect(result.relatedLocations).toBeDefined();
+      expect(result.relatedLocations).toHaveLength(1);
+      expect(result.relatedLocations[0].id).toBe(0);
+      expect(result.relatedLocations[0].message.text).toContain('Claim:');
+      expect(result.relatedLocations[0].message.text).toContain('Earth is round.');
+      expect(result.relatedLocations[0].physicalLocation.artifactLocation).toBeDefined();
+    });
+
+    it('should include relatedLocations on EU AI Act results', () => {
+      const dataWithHighRisk: ScanResult = {
+        ...mockData,
+        complianceReport: {
+          ...mockData.complianceReport,
+          euRiskSummary: { ...mockData.complianceReport.euRiskSummary, high: 1, highestTier: 'high' },
+          claimMappings: [{
+            claimId: 'c1', claimText: 'Recruitment uses AI', verificationStatus: 'supported',
+            riskLevel: 'high',
+            category: { level: 'high', title: 'High Risk', description: '', articles: ['Article 6'], requiredActions: [] },
+            matchedPatterns: ['employment'], confidence: 'high', confidenceScore: 0.7,
+          }],
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithHighRisk, 'sarif'));
+      const euResult = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/eu-ai-act/high'
+      );
+      expect(euResult.relatedLocations).toBeDefined();
+      expect(euResult.relatedLocations[0].message.text).toContain('Recruitment uses AI');
+    });
+
+    // --- Enhanced SARIF: uriBaseId ---
+
+    it('should include uriBaseId in artifactLocation', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      const result = parsed.runs[0].results[0];
+      expect(result.locations[0].physicalLocation.artifactLocation.uriBaseId).toBe('%SRCROOT%');
+    });
+
+    it('should include originalUriBaseIds in run', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      const run = parsed.runs[0];
+      expect(run.originalUriBaseIds).toBeDefined();
+      expect(run.originalUriBaseIds['%SRCROOT%']).toBeDefined();
+      expect(run.originalUriBaseIds['%SRCROOT%'].uri).toBe('');
+    });
+
+    // --- Enhanced SARIF: codeFlows ---
+
+    it('should include codeFlows for verification results', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Evidence says no.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      const result = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/contradicted'
+      );
+      expect(result.codeFlows).toBeDefined();
+      expect(result.codeFlows).toHaveLength(1);
+      expect(result.codeFlows[0].message.text).toContain('Verification chain');
+      expect(result.codeFlows[0].threadFlows).toHaveLength(1);
+      const locations = result.codeFlows[0].threadFlows[0].locations;
+      expect(locations).toHaveLength(2);
+      expect(locations[0].location.message.text).toContain('Claim extracted');
+      expect(locations[1].location.message.text).toContain('Verification result');
+      expect(locations[1].location.message.text).toContain('contradicted');
+    });
+
+    it('should include codeFlows for EU AI Act results', () => {
+      const dataWithHighRisk: ScanResult = {
+        ...mockData,
+        complianceReport: {
+          ...mockData.complianceReport,
+          euRiskSummary: { ...mockData.complianceReport.euRiskSummary, high: 1, highestTier: 'high' },
+          claimMappings: [{
+            claimId: 'c1', claimText: 'AI screens job applicants', verificationStatus: 'supported',
+            riskLevel: 'high',
+            category: { level: 'high', title: 'High Risk', description: '', articles: ['Article 6'], requiredActions: [] },
+            matchedPatterns: ['employment', 'screening'], confidence: 'high', confidenceScore: 0.8,
+          }],
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithHighRisk, 'sarif'));
+      const euResult = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/eu-ai-act/high'
+      );
+      expect(euResult.codeFlows).toBeDefined();
+      expect(euResult.codeFlows).toHaveLength(1);
+      const flow = euResult.codeFlows[0];
+      expect(flow.message.text).toContain('EU AI Act risk assessment');
+      const locs = flow.threadFlows[0].locations;
+      expect(locs).toHaveLength(3); // claim → patterns → risk level
+      expect(locs[0].location.message.text).toContain('AI screens job applicants');
+      expect(locs[1].location.message.text).toContain('employment');
+      expect(locs[2].location.message.text).toContain('high');
+    });
+
+    it('codeFlows threadFlow locations should have proper physicalLocation', () => {
+      const dataWithMixed: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'mixed', explanation: 'Conflicting.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithMixed, 'sarif'));
+      const result = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/mixed'
+      );
+      for (const loc of result.codeFlows[0].threadFlows[0].locations) {
+        expect(loc.location.physicalLocation).toBeDefined();
+        expect(loc.location.physicalLocation.artifactLocation.uri).toBe('input');
+        expect(loc.location.physicalLocation.artifactLocation.uriBaseId).toBe('%SRCROOT%');
+      }
+    });
+
+    // --- Enhanced SARIF: SarifOptions.inputUri ---
+
+    it('should use custom inputUri from SarifOptions', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif', { inputUri: 'docs/report.txt' }));
+      const result = parsed.runs[0].results[0];
+      expect(result.locations[0].physicalLocation.artifactLocation.uri).toBe('docs/report.txt');
+    });
+
+    it('SarifOptions inputUri should propagate to relatedLocations', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif', { inputUri: 'my/file.md' }));
+      const result = parsed.runs[0].results[0];
+      expect(result.relatedLocations[0].physicalLocation.artifactLocation.uri).toBe('my/file.md');
+    });
+
+    it('SarifOptions inputUri should propagate to codeFlows', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif', { inputUri: 'src/data.txt' }));
+      const result = parsed.runs[0].results[0];
+      const flowLoc = result.codeFlows[0].threadFlows[0].locations[0];
+      expect(flowLoc.location.physicalLocation.artifactLocation.uri).toBe('src/data.txt');
+    });
+
+    // --- Enhanced SARIF: schema structure validation ---
+
+    it('should have all required SARIF 2.1.0 top-level properties', () => {
+      const parsed = JSON.parse(renderReportAs(mockData, 'sarif'));
+      expect(parsed).toHaveProperty('$schema');
+      expect(parsed).toHaveProperty('version');
+      expect(parsed).toHaveProperty('runs');
+      expect(parsed.version).toBe('2.1.0');
+    });
+
+    it('each result should have ruleId, ruleIndex, level, and message', () => {
+      const dataWithContradiction: ScanResult = {
+        ...mockData,
+        verifications: {
+          c1: { claimId: 'c1', status: 'contradicted', explanation: 'Wrong.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithContradiction, 'sarif'));
+      for (const result of parsed.runs[0].results) {
+        expect(result).toHaveProperty('ruleId');
+        expect(result).toHaveProperty('ruleIndex');
+        expect(result).toHaveProperty('level');
+        expect(result).toHaveProperty('message');
+        expect(typeof result.ruleId).toBe('string');
+        expect(typeof result.ruleIndex).toBe('number');
+        expect(['error', 'warning', 'note', 'none']).toContain(result.level);
+        expect(typeof result.message.text).toBe('string');
+      }
+    });
+
+    it('each result location should have artifactLocation with uriBaseId', () => {
+      const dataWithFindings: ScanResult = {
+        ...mockData,
+        ruleFindings: [
+          { ruleId: 'pii-email', severity: 'high', message: 'PII: Email', match: 'a@b.com', offset: 0 },
+        ],
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithFindings, 'sarif'));
+      for (const result of parsed.runs[0].results) {
+        if (result.locations) {
+          for (const loc of result.locations) {
+            expect(loc.physicalLocation.artifactLocation.uriBaseId).toBe('%SRCROOT%');
+          }
+        }
+      }
+    });
+
+    it('rule findings should not have codeFlows (only verifications and EU results do)', () => {
+      const dataWithFindings: ScanResult = {
+        ...mockData,
+        ruleFindings: [
+          { ruleId: 'pii-email', severity: 'high', message: 'PII: Email', match: 'a@b.com', offset: 0 },
+        ],
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithFindings, 'sarif'));
+      const ruleResults = parsed.runs[0].results.filter(
+        (r: { ruleId: string }) => r.ruleId.startsWith('faultline/rule/')
+      );
+      for (const r of ruleResults) {
+        expect(r.codeFlows).toBeUndefined();
+      }
+    });
+
+    it('should not include relatedLocations when claim is not found', () => {
+      // verification for a claim not in the claims array
+      const dataWithOrphan: ScanResult = {
+        ...mockData,
+        claims: [], // no claims
+        verifications: {
+          c99: { claimId: 'c99', status: 'unverified', explanation: 'Unknown.', sources: [] },
+        },
+      };
+      const parsed = JSON.parse(renderReportAs(dataWithOrphan, 'sarif'));
+      const result = parsed.runs[0].results.find(
+        (r: { ruleId: string }) => r.ruleId === 'faultline/verification/unverified'
+      );
+      expect(result).toBeDefined();
+      // No relatedLocations or codeFlows when claim not found
+      expect(result.relatedLocations).toBeUndefined();
+      expect(result.codeFlows).toBeUndefined();
     });
   });
 });
