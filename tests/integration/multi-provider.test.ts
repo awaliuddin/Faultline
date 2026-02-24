@@ -15,6 +15,7 @@ vi.stubGlobal('fetch', mockFetch);
 
 import { createGeminiProvider } from '../../providers/gemini_provider';
 import { createClaudeProvider } from '../../providers/claude_provider';
+import { createOpenAIProvider } from '../../providers/openai_provider';
 import { getProvider } from '../../providers/registry';
 import type { Claim, VerificationResult } from '../../types';
 import type { LLMProvider, CritiqueResult } from '../../providers/base_provider';
@@ -28,6 +29,15 @@ function mockAnthropicResponse(text: string) {
   };
 }
 
+function mockOpenAIResponse(content: string) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    json: async () => ({ choices: [{ message: { content } }] }),
+  };
+}
+
 const SAMPLE_CLAIMS: Claim[] = [
   { id: 'c1', text: 'The Earth is round.', type: 'fact', importance: 5 },
   { id: 'c2', text: 'Water freezes at 0C.', type: 'fact', importance: 4 },
@@ -38,19 +48,24 @@ describe('Integration: Multi-Provider', () => {
     vi.clearAllMocks();
   });
 
-  it('Gemini and Claude should both extract claims with valid shapes', async () => {
+  it('Gemini, Claude, and OpenAI should all extract claims with valid shapes', async () => {
     // Gemini extraction
     mockGenerateContent.mockResolvedValueOnce({ text: JSON.stringify(SAMPLE_CLAIMS) });
     const gemini = createGeminiProvider('gemini-key');
     const geminiClaims = await gemini.extractClaims('Science facts');
 
-    // Claude extraction (same claims, different provider)
+    // Claude extraction
     mockFetch.mockResolvedValueOnce(mockAnthropicResponse(JSON.stringify(SAMPLE_CLAIMS)));
     const claude = createClaudeProvider('claude-key');
     const claudeClaims = await claude.extractClaims('Science facts');
 
-    // Both should return valid Claim[] arrays
-    for (const claims of [geminiClaims, claudeClaims]) {
+    // OpenAI extraction
+    mockFetch.mockResolvedValueOnce(mockOpenAIResponse(JSON.stringify({ claims: SAMPLE_CLAIMS })));
+    const openai = createOpenAIProvider('openai-key');
+    const openaiClaims = await openai.extractClaims('Science facts');
+
+    // All should return valid Claim[] arrays
+    for (const claims of [geminiClaims, claudeClaims, openaiClaims]) {
       expect(Array.isArray(claims)).toBe(true);
       expect(claims.length).toBeGreaterThan(0);
       for (const claim of claims) {
@@ -65,7 +80,7 @@ describe('Integration: Multi-Provider', () => {
     }
   });
 
-  it('Gemini and Claude should both verify claims with valid shapes', async () => {
+  it('Gemini, Claude, and OpenAI should all verify claims with valid shapes', async () => {
     const claim: Claim = { id: 'c1', text: 'Earth is round.', type: 'fact', importance: 5 };
 
     // Gemini verification
@@ -83,8 +98,15 @@ describe('Integration: Multi-Provider', () => {
     const claude = createClaudeProvider('claude-key');
     const claudeResult = await claude.verifyClaim(claim);
 
-    // Both should return valid VerificationResult
-    for (const result of [geminiResult, claudeResult]) {
+    // OpenAI verification
+    mockFetch.mockResolvedValueOnce(
+      mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'Scientifically proven.' })),
+    );
+    const openai = createOpenAIProvider('openai-key');
+    const openaiResult = await openai.verifyClaim(claim);
+
+    // All should return valid VerificationResult
+    for (const result of [geminiResult, claudeResult, openaiResult]) {
       expect(result).toHaveProperty('claimId');
       expect(result).toHaveProperty('status');
       expect(result).toHaveProperty('explanation');
@@ -96,7 +118,7 @@ describe('Integration: Multi-Provider', () => {
     }
   });
 
-  it('Gemini and Claude should both generate critiques with valid shapes', async () => {
+  it('Gemini, Claude, and OpenAI should all generate critiques with valid shapes', async () => {
     const failedClaims: Claim[] = [{ id: 'c1', text: 'Wrong claim.', type: 'fact', importance: 5 }];
 
     // Gemini critique
@@ -113,8 +135,15 @@ describe('Integration: Multi-Provider', () => {
     const claude = createClaudeProvider('claude-key');
     const claudeCritique = await claude.generateCritiqueAndPrompt('original', failedClaims);
 
-    // Both should return valid CritiqueResult
-    for (const critique of [geminiCritique, claudeCritique]) {
+    // OpenAI critique
+    mockFetch.mockResolvedValueOnce(
+      mockOpenAIResponse(JSON.stringify({ critique: 'Needs reinforcement.', improvedPrompt: 'Provide references.' })),
+    );
+    const openai = createOpenAIProvider('openai-key');
+    const openaiCritique = await openai.generateCritiqueAndPrompt('original', failedClaims);
+
+    // All should return valid CritiqueResult
+    for (const critique of [geminiCritique, claudeCritique, openaiCritique]) {
       expect(critique).toHaveProperty('critique');
       expect(critique).toHaveProperty('improvedPrompt');
       expect(typeof critique.critique).toBe('string');
@@ -127,13 +156,16 @@ describe('Integration: Multi-Provider', () => {
   it('registry should return distinct providers with correct names', () => {
     const gemini = getProvider('key', 'gemini');
     const claude = getProvider('key', 'claude');
+    const openai = getProvider('key', 'openai');
 
     expect(gemini.name).toBe('Google Gemini');
     expect(claude.name).toBe('Anthropic Claude');
+    expect(openai.name).toBe('OpenAI');
     expect(gemini.modelId).not.toBe(claude.modelId);
+    expect(openai.modelId).not.toBe(claude.modelId);
   });
 
-  it('both providers should handle extraction errors identically (empty array)', async () => {
+  it('all providers should handle extraction errors identically (empty array)', async () => {
     // Gemini error
     mockGenerateContent.mockRejectedValueOnce(new Error('Gemini down'));
     const gemini = createGeminiProvider('key');
@@ -144,11 +176,17 @@ describe('Integration: Multi-Provider', () => {
     const claude = createClaudeProvider('key');
     const claudeResult = await claude.extractClaims('Input');
 
+    // OpenAI error
+    mockFetch.mockRejectedValueOnce(new Error('OpenAI down'));
+    const openai = createOpenAIProvider('key');
+    const openaiResult = await openai.extractClaims('Input');
+
     expect(geminiResult).toEqual([]);
     expect(claudeResult).toEqual([]);
+    expect(openaiResult).toEqual([]);
   });
 
-  it('both providers should handle verification errors identically (unverified)', async () => {
+  it('all providers should handle verification errors identically (unverified)', async () => {
     const claim: Claim = { id: 'c1', text: 'Claim.', type: 'fact', importance: 5 };
 
     // Gemini error
@@ -161,13 +199,20 @@ describe('Integration: Multi-Provider', () => {
     const claude = createClaudeProvider('key');
     const claudeResult = await claude.verifyClaim(claim);
 
+    // OpenAI error
+    mockFetch.mockRejectedValueOnce(new Error('Timeout'));
+    const openai = createOpenAIProvider('key');
+    const openaiResult = await openai.verifyClaim(claim);
+
     expect(geminiResult.status).toBe('unverified');
     expect(claudeResult.status).toBe('unverified');
+    expect(openaiResult.status).toBe('unverified');
     expect(geminiResult.claimId).toBe('c1');
     expect(claudeResult.claimId).toBe('c1');
+    expect(openaiResult.claimId).toBe('c1');
   });
 
-  it('both providers should handle critique errors identically (fallback)', async () => {
+  it('all providers should handle critique errors identically (fallback)', async () => {
     // Gemini error
     mockGenerateContent.mockRejectedValueOnce(new Error('API error'));
     const gemini = createGeminiProvider('key');
@@ -178,8 +223,13 @@ describe('Integration: Multi-Provider', () => {
     const claude = createClaudeProvider('key');
     const claudeResult = await claude.generateCritiqueAndPrompt('text', []);
 
-    // Both return the same fallback structure
-    for (const result of [geminiResult, claudeResult]) {
+    // OpenAI error
+    mockFetch.mockRejectedValueOnce(new Error('API error'));
+    const openai = createOpenAIProvider('key');
+    const openaiResult = await openai.generateCritiqueAndPrompt('text', []);
+
+    // All return the same fallback structure
+    for (const result of [geminiResult, claudeResult, openaiResult]) {
       expect(result.critique).toBe('Analysis incomplete.');
       expect(result.improvedPrompt).toBeTruthy();
     }

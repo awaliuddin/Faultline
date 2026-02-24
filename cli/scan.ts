@@ -40,14 +40,17 @@ export async function scan(text: string, providerName?: string, minConfidence?: 
 
   let apiKey = '';
   if (resolvedProvider !== 'mock') {
-    apiKey =
-      resolvedProvider === 'claude'
-        ? process.env.ANTHROPIC_API_KEY || ''
-        : process.env.GEMINI_API_KEY || '';
+    const keyMap: Record<string, string> = {
+      claude: 'ANTHROPIC_API_KEY',
+      openai: 'OPENAI_API_KEY',
+      gemini: 'GEMINI_API_KEY',
+    };
+    const envVar = keyMap[resolvedProvider] || 'GEMINI_API_KEY';
+    apiKey = process.env[envVar] || '';
 
     if (!apiKey) {
       throw new Error(
-        `No API key found. Set ${resolvedProvider === 'claude' ? 'ANTHROPIC_API_KEY' : 'GEMINI_API_KEY'} or use --provider mock.`,
+        `No API key found. Set ${envVar} or use --provider mock.`,
       );
     }
   }

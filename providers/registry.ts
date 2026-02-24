@@ -1,6 +1,7 @@
 import type { LLMProvider, ProviderFactory } from './base_provider';
 import { createGeminiProvider } from './gemini_provider';
 import { createClaudeProvider } from './claude_provider';
+import { createOpenAIProvider } from './openai_provider';
 import { createMockProvider } from './mock_provider';
 
 const DEFAULT_PROVIDER = 'gemini';
@@ -8,6 +9,7 @@ const DEFAULT_PROVIDER = 'gemini';
 const factories: Record<string, ProviderFactory> = {
   gemini: createGeminiProvider,
   claude: createClaudeProvider,
+  openai: createOpenAIProvider,
   mock: createMockProvider,
 };
 

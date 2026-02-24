@@ -13,6 +13,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
 import { getProvider, registerProvider, listProviders } from '../../providers/registry';
+import { createOpenAIProvider } from '../../providers/openai_provider';
 import { generateComplianceReport } from '../../compliance/report_generator';
 import { mapClaimToRiskCategory } from '../../compliance/eu_ai_act';
 import type { Claim, VerificationResult, AnalysisState } from '../../types';
@@ -56,6 +57,15 @@ function mockAnthropicResponse(text: string) {
   };
 }
 
+function mockOpenAIResponse(content: string) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    json: async () => ({ choices: [{ message: { content } }] }),
+  };
+}
+
 /**
  * Run the full pipeline through any LLMProvider: extract → filter → verify → risk → EU map → report.
  */
@@ -73,39 +83,8 @@ async function runFullPipeline(provider: LLMProvider) {
   return { claims, toVerify, verifications, risk, report };
 }
 
-// --- Mock OpenAI-style provider (proves registry extensibility) ---
-
-function createMockOpenAIProvider(apiKey: string): LLMProvider {
-  return {
-    name: 'OpenAI GPT',
-    modelId: 'gpt-4o',
-
-    async extractClaims(text: string): Promise<Claim[]> {
-      if (!text) return [];
-      // Return deterministic claims for testing
-      return SAMPLE_CLAIMS;
-    },
-
-    async verifyClaim(claim: Claim): Promise<VerificationResult> {
-      return {
-        claimId: claim.id,
-        status: 'supported',
-        explanation: 'Verified by OpenAI mock.',
-        sources: [],
-      };
-    },
-
-    async generateCritiqueAndPrompt(
-      originalText: string,
-      failedClaims: Claim[],
-    ): Promise<CritiqueResult> {
-      return {
-        critique: 'OpenAI assessment: stable.',
-        improvedPrompt: 'No changes needed.',
-      };
-    },
-  };
-}
+// Note: OpenAI provider is now a real provider (providers/openai_provider.ts)
+// registered in the factory by default. We use fetch mocks for its API calls.
 
 // ================================================================
 
@@ -174,11 +153,20 @@ describe('Integration: Multi-Provider Pipeline', () => {
       expect(report.claimMappings).toHaveLength(2);
     });
 
-    it('OpenAI mock: extract → filter → verify → risk → EU map → report', async () => {
-      registerProvider('openai', createMockOpenAIProvider);
+    it('OpenAI: extract → filter → verify → risk → EU map → report', async () => {
+      // Extraction
+      mockFetch.mockResolvedValueOnce(mockOpenAIResponse(JSON.stringify({ claims: SAMPLE_CLAIMS })));
+      // c1 → supported
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'Confirmed.' })),
+      );
+      // c2 → supported
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'Correct.' })),
+      );
 
       const provider = getProvider('openai-key', 'openai');
-      expect(provider.name).toBe('OpenAI GPT');
+      expect(provider.name).toBe('OpenAI');
 
       const { claims, toVerify, verifications, risk, report } = await runFullPipeline(provider);
 
@@ -196,8 +184,6 @@ describe('Integration: Multi-Provider Pipeline', () => {
 
   describe('provider switching via registry', () => {
     it('same input produces valid reports regardless of provider', async () => {
-      registerProvider('openai', createMockOpenAIProvider);
-
       // Gemini
       mockGenerateContent.mockResolvedValueOnce({ text: JSON.stringify(SAMPLE_CLAIMS) });
       mockGenerateContent.mockResolvedValueOnce({
@@ -216,6 +202,15 @@ describe('Integration: Multi-Provider Pipeline', () => {
       );
       mockFetch.mockResolvedValueOnce(
         mockAnthropicResponse(JSON.stringify({ status: 'supported', explanation: 'OK.' })),
+      );
+
+      // OpenAI
+      mockFetch.mockResolvedValueOnce(mockOpenAIResponse(JSON.stringify({ claims: SAMPLE_CLAIMS })));
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'OK.' })),
+      );
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'OK.' })),
       );
 
       const reports = [];
@@ -255,9 +250,17 @@ describe('Integration: Multi-Provider Pipeline', () => {
       expect(report.euRiskSummary.totalClaims).toBe(2);
     });
 
-    it('runtime-registered provider integrates with full pipeline', async () => {
-      registerProvider('openai', createMockOpenAIProvider);
+    it('openai provider is registered by default and integrates with full pipeline', async () => {
       expect(listProviders()).toContain('openai');
+
+      // Mock all three fetch calls: extract + 2 verifications
+      mockFetch.mockResolvedValueOnce(mockOpenAIResponse(JSON.stringify({ claims: SAMPLE_CLAIMS })));
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'OK.' })),
+      );
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(JSON.stringify({ status: 'supported', explanation: 'OK.' })),
+      );
 
       const provider = getProvider('key', 'openai');
       const { report } = await runFullPipeline(provider);
