@@ -106,14 +106,14 @@ export class FindingsTracker {
       ...Object.entries(prev.verifications)
         .filter(([, v]) => v.status === 'contradicted' || v.status === 'mixed')
         .map(([id]) => id),
-      ...prev.ruleFindings.map(f => f.ruleId + ':' + f.location?.line),
+      ...prev.ruleFindings.map(f => f.ruleId + ':' + f.offset),
     ]);
 
     const currIssueIds = new Set([
       ...Object.entries(result.verifications)
         .filter(([, v]) => v.status === 'contradicted' || v.status === 'mixed')
         .map(([id]) => id),
-      ...result.ruleFindings.map(f => f.ruleId + ':' + f.location?.line),
+      ...result.ruleFindings.map(f => f.ruleId + ':' + f.offset),
     ]);
 
     let newFindings = 0;

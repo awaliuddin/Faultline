@@ -31,8 +31,7 @@
 - Decompose dense text into atomic claim-graph representations
 - Classify by type (fact/opinion/interpretation) and importance
 - Score logical fragility and find weakest reasoning chains
-- **Shipped**: N-01
-- **Ideas**: N-10, N-12
+- **Shipped**: N-01, N-10, N-12
 
 ### EVIDENCE — "Web-Grounded Verification"
 - Verify factual claims against live web data using search + LLM
@@ -278,6 +277,55 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 ## Team Questions
 
 _(Project team: add questions for ASIF CoS here. They will be answered during the next enrichment cycle.)_
+
+---
+
+### TQ-001 — P-08b Split: Is the stash still the split point? (2026-02-24)
+**From**: Project Team
+
+**Observation**: PI-001 noted that Faultline Pro (stash) was unique for having multi-provider support. That differentiation is gone — the Kaggle branch now ships Gemini + OpenAI + Claude providers, a full `LLMProvider` interface, a provider registry, confidence calibration, and a CLI. The stash's FM-agnostic architecture has been fully re-implemented here.
+
+**Question**: Given this, what is the actual split point for P-08b? Options:
+1. The stash remains the foundation — we cherry-pick its UI/UX work and discard the duplicated backend
+2. This branch *is* P-08b — rename/promote it and close the stash as superseded
+3. P-08b waits for a specific forcing function (EU Act enforcement, Kaggle deadline, enterprise customer)
+
+**Recommendation from team**: Option 2 or 3. The stash is likely stale. Worth a quick `git stash show -p stash@{0}` to compare what's actually in it before deciding.
+
+---
+
+### TQ-002 — SYNTHESIS pillar has zero shipped initiatives (2026-02-24)
+**From**: Project Team
+
+**Observation**: The SYNTHESIS pillar ("Ask Better Next Time") has no N-series initiatives and no shipped code in the CLI. The React app's `geminiService.ts` has `generateCritiqueAndPrompt()` but the CLI pipeline does not expose critique or improved-prompt generation.
+
+**Question**: Should we add a SYNTHESIS initiative? Proposed N-13:
+- `faultline critique --input <file>` — runs the full pipeline then generates a critique of the argument's reasoning gaps + an improved prompt that forces more rigorous claims
+- This is a natural next step after `faultline weakest` (identify the problem) → `faultline critique` (fix the problem)
+
+**Recommendation**: High value, low complexity. Provider-agnostic by design (all three providers have `generateCritiqueAndPrompt`). Suggest P1 priority.
+
+---
+
+### TQ-003 — Claim type has no `dependencies` field (2026-02-24)
+**From**: Project Team
+
+**Observation**: N-01 description says "atomic claim-graph representations with dependency graph" and N-10 was originally planned as a dependency-graph visualization. The actual `Claim` type only has `id`, `text`, `type`, `importance` — no `dependencies` field. N-10 was delivered using EU risk tier grouping as a proxy (which is genuinely useful), but true claim dependency traversal (claim A depends on claim B being true) is not possible with the current schema.
+
+**Question**: Should we extend the `Claim` type with `dependencies?: string[]` (array of claim IDs) and update the extraction prompts to ask providers to identify logical dependencies? This would unlock true weakest-chain analysis and complete the original N-01 + N-10 vision.
+
+**Recommendation**: Yes, but requires prompt engineering across all three providers. Suggest sizing as M-L effort — may be worth deferring to P-08b where provider prompts can be designed cleanly from scratch.
+
+---
+
+### TQ-004 — npm publish readiness for @nxtg-ai/faultline (2026-02-24)
+**From**: Project Team
+
+**Observation**: `package.json` has `"name": "@nxtg-ai/faultline"`, `"version": "0.1.0"`, bin entries, and a files array. The package is not yet published to npm. CI is green.
+
+**Question**: What is the publish timeline? Is there a go/no-go criteria (minimum test count, documentation coverage, security audit)?
+
+**Recommendation**: The package is ready functionally. Pre-publish checklist suggestion: (1) run `npm pack --dry-run` to verify included files, (2) verify `npx @nxtg-ai/faultline scan --help` works end-to-end with real providers, (3) tag v0.1.0 release on GitHub, (4) publish. Could be done in one session.
 
 ### DIRECTIVE-NXTG-20260222-02 — Test Bootstrap + CI Pipeline
 **From**: NXTG-AI CoS | **Priority**: P0

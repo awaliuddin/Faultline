@@ -197,6 +197,7 @@ describe('FindingsTracker', () => {
         claimMappings: [],
         triggeredArticles: [],
         mitigations: [],
+        confidenceDistribution: { high: 0, medium: 0, low: 0 },
       },
       ruleFindings: [],
       ...overrides,
@@ -209,7 +210,7 @@ describe('FindingsTracker', () => {
       verifications: {
         c1: { claimId: 'c1', status: 'contradicted', explanation: 'Bad', sources: [] },
       },
-      ruleFindings: [{ ruleId: 'pii', severity: 'high', message: 'PII found', location: { line: 5, column: 0 } }],
+      ruleFindings: [{ ruleId: 'pii', severity: 'high', message: 'PII found', match: 'PII found', offset: 5 }],
     });
 
     const diff = tracker.update('file.ts', result);
