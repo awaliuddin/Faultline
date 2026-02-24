@@ -21,6 +21,7 @@ import { aggregate, renderAggregatedReport, type AggregateOutputFormat } from '.
 import { saveHistoryEntry, listHistory, analyzeTrend, formatHistoryList, formatTrendAnalysis } from '../history/store.js';
 import { analyzeWeakestLinks } from '../analysis/weakest-link.js';
 import { formatWeakestLinkAnalysis } from './weakest.js';
+import { buildClaimGraph, renderMermaid, renderDot } from '../analysis/claim-graph.js';
 
 const VERSION = '0.1.0';
 
@@ -38,6 +39,7 @@ Usage:
   faultline history [--all] [--history-dir <path>]                  List past scans
   faultline trend --file <path> [--history-dir <path>]             Show finding trend for a file
   faultline weakest --input <file> [--provider mock] [--top N]         Identify the weakest-link claim
+  faultline graph --input <file> [--provider mock] [--format mermaid|dot]  Export claim graph
   faultline rules                                                  List available rules
   faultline init                                                   Generate .faultlinerc.json
   faultline version                                                Print version
@@ -258,6 +260,37 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       const weakAnalysis = analyzeWeakestLinks(weakResult.claims, weakResult.verifications, weakResult.complianceReport);
 
       return { exitCode: 0, output: formatWeakestLinkAnalysis(weakAnalysis, isNaN(topN) ? 5 : topN) };
+    }
+
+    case 'graph': {
+      const inputPath = flags['input'];
+      if (!inputPath) {
+        return { exitCode: 1, output: 'Error: --input <file> is required for graph export.\n\n' + usage() };
+      }
+
+      const resolvedGraph = resolve(inputPath);
+      if (!existsSync(resolvedGraph)) {
+        return { exitCode: 1, output: `Error: File not found: ${resolvedGraph}` };
+      }
+
+      const graphText = readFileSync(resolvedGraph, 'utf-8').trim();
+      if (!graphText) {
+        return { exitCode: 1, output: 'Error: Input file is empty.' };
+      }
+
+      const graphFormat = (flags['format'] || 'mermaid') as 'mermaid' | 'dot';
+      if (!['mermaid', 'dot'].includes(graphFormat)) {
+        return { exitCode: 1, output: 'Error: --format must be mermaid or dot.' };
+      }
+
+      const graphConfig = loadConfig();
+      const { provider: graphProvider, minConfidence: graphMinConf } = mergeFlags(graphConfig, flags);
+
+      const graphResult = await scan(graphText, graphProvider, graphMinConf);
+      const claimGraph = buildClaimGraph(graphResult.claims, graphResult.verifications, graphResult.complianceReport);
+
+      const graphOutput = graphFormat === 'dot' ? renderDot(claimGraph) : renderMermaid(claimGraph);
+      return { exitCode: 0, output: graphOutput };
     }
 
     case 'scan': {

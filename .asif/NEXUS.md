@@ -19,7 +19,7 @@
 | N-07 | Live Demo & UI Polish | VISUALIZATION | SHIPPED | P1 | 2026-01 |
 | N-08 | Test Coverage Expansion | — | SHIPPED | P0 | 2026-02 |
 | N-09 | CI/CD Pipeline | — | SHIPPED | P0 | 2026-02 |
-| N-10 | Claim Graph Visualization | FORENSIC | IDEA | P1 | — |
+| N-10 | Claim Graph Visualization | FORENSIC | SHIPPED | P1 | 2026-02 |
 | N-11 | Multimodal Upload (PDF/OCR) | MULTIMODAL | IDEA | P1 | — |
 | N-12 | Weakest-Link Detection | FORENSIC | SHIPPED | P1 | 2026-02 |
 
@@ -1507,3 +1507,32 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - **CLI**: `faultline weakest --input <file> [--provider mock] [--top N]` added to `cli/index.ts`. Reads file, runs scan, calls `analyzeWeakestLinks`, formats and returns.
 > - **Tests**: 794 total (was 763). 31 new tests across 9 describe blocks: VERDICT_SCORES, empty inputs, sorting, confidenceScore fallback, argumentStrength thresholds, strengthScore, summary, fragilityReason, claims-without-verifications exclusion. Zero regressions.
 > - Files: `analysis/weakest-link.ts` (new), `cli/weakest.ts` (new), `cli/index.ts` (modified), `tests/weakest-link.test.ts` (new).
+
+---
+
+### DIRECTIVE-NXTG-20260224-02 — Claim Graph Visualization (N-10)
+**From**: Project Team (self-directed) | **Priority**: P1
+**Injected**: 2026-02-24 09:30 | **Estimate**: M | **Status**: COMPLETE
+
+> **Context**: No CoS directives pending. N-10 (Claim Graph Visualization) is the last open P1 FORENSIC IDEA. Compliance teams reviewing AI-generated content need a visual map of claims by risk tier — not just numbers, but a navigable graph showing which claims are in unacceptable/high/limited/minimal risk zones. Mermaid and DOT formats integrate directly into GitHub, Notion, VS Code, and CI reports.
+
+**Action Items**:
+1. [x] Create `analysis/claim-graph.ts` — `buildClaimGraph()`: all claims as nodes, grouped by EU risk tier; `renderMermaid()`: Mermaid `graph TD` with subgraphs per tier, classDef color coding; `renderDot()`: Graphviz DOT with cluster subgraphs and status-colored nodes
+2. [x] Modify `cli/index.ts` — add `graph` command: `faultline graph --input <file> [--provider mock] [--format mermaid|dot]`
+3. [x] Create `tests/claim-graph.test.ts` — 35 tests across 10 describe blocks; zero regressions
+4. [x] Full suite passes. Update N-10 IDEA → SHIPPED. Commit and push.
+
+**Constraints**:
+- Pure computation — no I/O in analysis module
+- Both Mermaid and DOT formats supported via `--format` flag (default: mermaid)
+- All 5 EU tiers represented; empty tiers omitted from output
+
+**Response** (filled by project team):
+> **Delivered 2026-02-24.** Claim Graph Visualization fully implemented (N-10 → SHIPPED):
+>
+> - **`analysis/claim-graph.ts`**: `buildClaimGraph(claims, verifications, complianceReport)` maps every claim to a `ClaimNode` with `nodeId`, `status`, `euTier`, `confidenceScore`, `label` (60-char truncation). Nodes sorted by tier severity then importance desc. `nodesByTier` always has all 5 tier keys. Exports `STATUS_COLORS` and `TIER_COLORS` constants.
+> - **`renderMermaid(graph)`**: `graph TD` with subgraph per non-empty tier (`UNACCEPTABLE`/`HIGH RISK`/`LIMITED RISK`/`MINIMAL RISK`/`UNVERIFIED`). Node labels include type, importance, status. `classDef` block for all 6 statuses. Per-node `class` assignments at end.
+> - **`renderDot(graph)`**: `digraph ClaimGraph` with `subgraph cluster_X` per non-empty tier. Status-colored node `fillcolor`, tier-colored cluster `fillcolor`. Valid Graphviz DOT ready for `dot -Tpng`.
+> - **CLI**: `faultline graph --input <file> [--format mermaid|dot]` added to `cli/index.ts`. Runs scan, builds graph, renders in requested format.
+> - **Tests**: 829 total (was 794). 35 new tests across 10 describe blocks: STATUS_COLORS, TIER_COLORS, buildClaimGraph basic/truncation/sorting/nodesByTier, renderMermaid structure/class assignments, renderDot structure/empty graph. Zero regressions.
+> - Files: `analysis/claim-graph.ts` (new), `cli/index.ts` (modified), `tests/claim-graph.test.ts` (new).
