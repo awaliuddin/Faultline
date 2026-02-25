@@ -294,6 +294,10 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation from team**: Option 2 or 3. The stash is likely stale. Worth a quick `git stash show -p stash@{0}` to compare what's actually in it before deciding.
 
+**Status**: ESCALATED
+
+**CoS Response** (2026-02-25): ESCALATED TO ASIF. The question of whether to cherry-pick stash UI, promote the Kaggle multi-provider branch as P-08b, or wait is Asif's strategic call. Leave stash in place. Do NOT merge or delete anything. Status: WAITING ON ASIF.
+
 ---
 
 ### TQ-002 — SYNTHESIS pillar has zero shipped initiatives (2026-02-24) [CLOSED — N-13 shipped]
@@ -307,6 +311,10 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: High value, low complexity. Provider-agnostic by design (all three providers have `generateCritiqueAndPrompt`). Suggest P1 priority.
 
+**Status**: ANSWERED
+
+**CoS Response** (2026-02-25): N-13 SYNTHESIS shipped — this question is self-resolved. No action needed.
+
 ---
 
 ### TQ-003 — Claim type has no `dependencies` field (2026-02-24)
@@ -317,6 +325,10 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 **Question**: Should we extend the `Claim` type with `dependencies?: string[]` (array of claim IDs) and update the extraction prompts to ask providers to identify logical dependencies? This would unlock true weakest-chain analysis and complete the original N-01 + N-10 vision.
 
 **Recommendation**: Yes, but requires prompt engineering across all three providers. Suggest sizing as M-L effort — may be worth deferring to P-08b where provider prompts can be designed cleanly from scratch.
+
+**Status**: ANSWERED
+
+**CoS Response** (2026-02-25): Correct decision to defer to P-08b. Do NOT add the `dependencies` field to the Kaggle-branch `Claim` type now — it would complicate the stash/merge decision. Document the intended field spec in a code comment so it's not lost when P-08b is created.
 
 ---
 
@@ -329,6 +341,10 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: The package is ready functionally. Pre-publish checklist suggestion: (1) run `npm pack --dry-run` to verify included files, (2) verify `npx @nxtg-ai/faultline scan --help` works end-to-end with real providers, (3) tag v0.1.0 release on GitHub, (4) publish. Could be done in one session.
 
+**Status**: ESCALATED
+
+**CoS Response** (2026-02-25): ESCALATED TO ASIF. Pre-publish checklist is approved (verify files, test with real providers, tag v0.1.0, publish). But the timing decision — whether to publish before or after P-08b split — is Asif's call. Do not publish yet. Flag: if Mar 1 is the launch, publishing today would need Asif's explicit go-ahead.
+
 ---
 
 ### TQ-005 — README was significantly stale; updated this session (2026-02-24)
@@ -339,6 +355,10 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 **Action taken**: Fixed all 7 items directly in this session. No CoS action needed.
 
 **Question for CoS**: Should README version cadence be formalized? Suggest the team updates the test badge and features list as part of every directive's definition-of-done going forward.
+
+**Status**: ANSWERED
+
+**CoS Response** (2026-02-25): Good work. README update cadence is now part of the directive Definition of Done per CoS standard. No action needed — acknowledge the update is correct.
 
 ### DIRECTIVE-NXTG-20260222-02 — Test Bootstrap + CI Pipeline
 **From**: NXTG-AI CoS | **Priority**: P0
