@@ -22,6 +22,8 @@ import { saveHistoryEntry, listHistory, analyzeTrend, formatHistoryList, formatT
 import { analyzeWeakestLinks } from '../analysis/weakest-link.js';
 import { formatWeakestLinkAnalysis } from './weakest.js';
 import { buildClaimGraph, renderMermaid, renderDot } from '../analysis/claim-graph.js';
+import { extractFailedClaims, buildCritiqueAnalysis } from '../analysis/critique.js';
+import { formatCritique } from './critique.js';
 
 const VERSION = '0.1.0';
 
@@ -40,6 +42,7 @@ Usage:
   faultline trend --file <path> [--history-dir <path>]             Show finding trend for a file
   faultline weakest --input <file> [--provider mock] [--top N]         Identify the weakest-link claim
   faultline graph --input <file> [--provider mock] [--format mermaid|dot]  Export claim graph
+  faultline critique --input <file> [--provider mock]              Critique failed claims + improved prompt
   faultline rules                                                  List available rules
   faultline init                                                   Generate .faultlinerc.json
   faultline version                                                Print version
@@ -291,6 +294,55 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
 
       const graphOutput = graphFormat === 'dot' ? renderDot(claimGraph) : renderMermaid(claimGraph);
       return { exitCode: 0, output: graphOutput };
+    }
+
+    case 'critique': {
+      const inputPath = flags['input'];
+      if (!inputPath) {
+        return { exitCode: 1, output: 'Error: --input <file> is required for critique.\n\n' + usage() };
+      }
+
+      const resolvedCrit = resolve(inputPath);
+      if (!existsSync(resolvedCrit)) {
+        return { exitCode: 1, output: `Error: File not found: ${resolvedCrit}` };
+      }
+
+      const critText = readFileSync(resolvedCrit, 'utf-8').trim();
+      if (!critText) {
+        return { exitCode: 1, output: 'Error: Input file is empty.' };
+      }
+
+      const critConfig = loadConfig();
+      const { provider: critProviderName, minConfidence: critMinConf } = mergeFlags(critConfig, flags);
+      const resolvedCritProvider = critProviderName || 'gemini';
+
+      // Resolve API key (same pattern as scan command)
+      let critApiKey = '';
+      if (resolvedCritProvider !== 'mock') {
+        const keyMap: Record<string, string> = {
+          claude: 'ANTHROPIC_API_KEY',
+          openai: 'OPENAI_API_KEY',
+          gemini: 'GEMINI_API_KEY',
+        };
+        critApiKey = process.env[keyMap[resolvedCritProvider] || 'GEMINI_API_KEY'] || '';
+        if (!critApiKey) {
+          return { exitCode: 1, output: `Error: No API key found for provider "${resolvedCritProvider}". Set the appropriate environment variable or use --provider mock.` };
+        }
+      }
+
+      const critScanResult = await scan(critText, resolvedCritProvider, critMinConf);
+
+      const { getProvider: getCritProvider } = await import('../providers/registry.js');
+      const critProvider = getCritProvider(critApiKey, resolvedCritProvider);
+      const failedClaims = extractFailedClaims(critScanResult.claims, critScanResult.verifications);
+      const critiqueResultData = await critProvider.generateCritiqueAndPrompt(critText, failedClaims);
+      const critiqueAnalysis = buildCritiqueAnalysis(
+        critScanResult.claims,
+        critScanResult.verifications,
+        critiqueResultData,
+      );
+
+      return { exitCode: 0, output: formatCritique(critiqueAnalysis, critProvider.name) };
     }
 
     case 'scan': {

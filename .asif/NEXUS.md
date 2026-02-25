@@ -22,6 +22,7 @@
 | N-10 | Claim Graph Visualization | FORENSIC | SHIPPED | P1 | 2026-02 |
 | N-11 | Multimodal Upload (PDF/OCR) | MULTIMODAL | IDEA | P1 | — |
 | N-12 | Weakest-Link Detection | FORENSIC | SHIPPED | P1 | 2026-02 |
+| N-13 | Critique + Improved Prompt | SYNTHESIS | SHIPPED | P1 | 2026-02 |
 
 ---
 
@@ -49,6 +50,7 @@
 - Generate improved prompts that force rigor and transparency
 - Optional answer rewrites with sourced citations
 - Critique generation highlighting reasoning gaps
+- **Shipped**: N-13
 
 ### MULTIMODAL — "Beyond Text"
 - Accept screenshots, PDFs, and other inputs
@@ -294,7 +296,7 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 ---
 
-### TQ-002 — SYNTHESIS pillar has zero shipped initiatives (2026-02-24)
+### TQ-002 — SYNTHESIS pillar has zero shipped initiatives (2026-02-24) [CLOSED — N-13 shipped]
 **From**: Project Team
 
 **Observation**: The SYNTHESIS pillar ("Ask Better Next Time") has no N-series initiatives and no shipped code in the CLI. The React app's `geminiService.ts` has `generateCritiqueAndPrompt()` but the CLI pipeline does not expose critique or improved-prompt generation.
@@ -1595,3 +1597,33 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 > - **CLI**: `faultline graph --input <file> [--format mermaid|dot]` added to `cli/index.ts`. Runs scan, builds graph, renders in requested format.
 > - **Tests**: 829 total (was 794). 35 new tests across 10 describe blocks: STATUS_COLORS, TIER_COLORS, buildClaimGraph basic/truncation/sorting/nodesByTier, renderMermaid structure/class assignments, renderDot structure/empty graph. Zero regressions.
 > - Files: `analysis/claim-graph.ts` (new), `cli/index.ts` (modified), `tests/claim-graph.test.ts` (new).
+
+---
+
+### DIRECTIVE-NXTG-20260224-03 — Critique + Improved Prompt CLI (N-13 SYNTHESIS)
+**From**: Project Team (self-directed) | **Priority**: P1
+**Injected**: 2026-02-24 17:15 | **Estimate**: M | **Status**: COMPLETE
+
+> **Context**: SYNTHESIS pillar had zero shipped initiatives despite all three providers implementing `generateCritiqueAndPrompt()` since R30. Recommended in TQ-002 for four consecutive sessions. The weakest → critique → fix loop is the core user value: identify the problem (weakest-link), understand it (critique), get a better prompt (improved prompt). Shipping closes the loop.
+
+**Action Items**:
+1. [x] Create `analysis/critique.ts` — `extractFailedClaims()` (contradicted/mixed/unverified), `buildCritiqueAnalysis()`, `CritiqueAnalysis` interface, `FAILED_STATUSES` constant
+2. [x] Create `cli/critique.ts` — pure formatter: lists failed claims, CRITIQUE section, IMPROVED PROMPT section, zero-failure path
+3. [x] Modify `cli/index.ts` — add `critique` command: `faultline critique --input <file> [--provider mock]`
+4. [x] Create `tests/critique.test.ts` — 39 tests across 12 describe blocks; zero regressions
+5. [x] N-13 added to Executive Dashboard (SYNTHESIS → SHIPPED). TQ-002 closed. Commit and push.
+
+**Constraints**:
+- Pure computation in `analysis/critique.ts` — no I/O
+- CRITIQUE/IMPROVED PROMPT sections only rendered when `hasCritique` is true
+- Claim text truncated at 80 chars in formatter output
+
+**Response** (filled by project team):
+> **Delivered 2026-02-24.** SYNTHESIS pillar now has its first shipped initiative (N-13):
+>
+> - **`analysis/critique.ts`**: `FAILED_STATUSES = {contradicted, mixed, unverified}`. `extractFailedClaims()` filters claims whose verification status is in FAILED_STATUSES (claims with no verification are excluded — they were never verified, not failed). `buildCritiqueAnalysis()` assembles counts + passthrough of critique/improvedPrompt.
+> - **`cli/critique.ts`**: Formatter mirrors `cli/weakest.ts` conventions. U+2550 separator. Two output paths: zero-failures (clean message) and failures present (failed claim list + CRITIQUE + IMPROVED PROMPT sections gated on `hasCritique`).
+> - **CLI**: `faultline critique --input <file> [--provider mock]` added to `cli/index.ts`. Runs scan, extracts failed claims, calls `provider.generateCritiqueAndPrompt()`, formats result.
+> - **Tests**: 868 total (was 829). 39 new tests across 12 describe blocks: FAILED_STATUSES membership, extractFailedClaims basics/status coverage/ordering, buildCritiqueAnalysis counts/hasCritique/passthrough, formatCritique zero-failures/with-failures/truncation/no-critique. Zero regressions.
+> - **TQ-002 closed**: SYNTHESIS pillar now SHIPPED. All five pillars have ≥1 shipped initiative.
+> - Files: `analysis/critique.ts` (new), `cli/critique.ts` (new), `cli/index.ts` (modified), `tests/critique.test.ts` (new).
