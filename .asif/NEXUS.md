@@ -101,16 +101,20 @@
 **Shipped (2026-02-22)**: `.github/workflows/ci.yml` — checkout@v4, setup-node@v4 (Node 20), npm ci, npm test, npm run build. Triggers on push to main and PRs to main.
 
 ### N-10: Claim Graph Visualization
-**Pillar**: FORENSIC | **Status**: IDEA | **Priority**: P1
-**What**: Network/DAG visualization showing dependency graph of claims. Highlight critical reasoning paths.
+**Pillar**: FORENSIC | **Status**: SHIPPED | **Priority**: P1
+**What**: Network/DAG visualization showing dependency graph of claims. Delivered via EU risk tier grouping as proxy for dependency graph (true claim dependency deferred to P-08b per TQ-003).
 
 ### N-11: Multimodal Upload (PDF/OCR)
 **Pillar**: MULTIMODAL | **Status**: IDEA | **Priority**: P1
 **What**: Image/PDF OCR extraction as entry point to claims pipeline.
 
 ### N-12: Weakest-Link Detection
-**Pillar**: FORENSIC | **Status**: IDEA | **Priority**: P1
-**What**: Automatic identification of most fragile reasoning chains; visual highlighting in UI.
+**Pillar**: FORENSIC | **Status**: SHIPPED | **Priority**: P1
+**What**: Automatic identification of most fragile reasoning chains; `faultline weakest` CLI command with risk-tier ordering and fragility scoring.
+
+### N-13: Critique + Improved Prompt
+**Pillar**: SYNTHESIS | **Status**: SHIPPED | **Priority**: P1
+**What**: `faultline critique` CLI command — full pipeline + critique of reasoning gaps + improved prompt that forces more rigorous claims. All three providers support `generateCritiqueAndPrompt`.
 
 ---
 
@@ -138,6 +142,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-02-28 | DIRECTIVE-NXTG-20260228-02 DONE: Initiative Details reconciled (N-10, N-12 IDEA→SHIPPED; N-13 added). 868 tests verified (28 files). |
 | 2026-02-28 | Archived 36 completed CoS directives to NEXUS-archive.md. NEXUS.md reduced from 1650 to 284 lines. |
 | 2026-02-28 | CoS BUILD beat: 868 tests verified (28 files). Stash merge artifacts cleaned. All directives COMPLETED. Awaiting Asif decisions on P-08b split (TQ-001) and npm publish (TQ-004). |
 | 2026-02-23 | Report aggregation: multi-file summary, risk heatmap, 4 output formats, faultline aggregate CLI. 547 tests, 22 files. |
@@ -174,7 +179,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 ### DIRECTIVE-NXTG-20260228-02 — NEXUS Detail Section Cleanup
 **From**: NXTG-AI CoS | **Priority**: P2
-**Injected**: 2026-02-28 | **Estimate**: S | **Status**: PENDING
+**Injected**: 2026-02-28 | **Estimate**: S | **Status**: DONE
 
 > **Estimate key**: S = hours (same session), M = 1-2 days, L = 3+ days
 
@@ -184,7 +189,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 3. [ ] Update NEXUS changelog with current session status
 
 **Response** (filled by project team):
->
+> COMPLETE (2026-02-28). (1) N-10 Initiative Details updated: IDEA→SHIPPED with delivery note. N-12 Initiative Details updated: IDEA→SHIPPED with CLI command description. N-13 added to Initiative Details section (was missing). (2) 868 tests pass (28 files). (3) Changelog updated below.
 
 ---
 
