@@ -172,7 +172,19 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 > 36 completed directives archived to NEXUS-archive.md (2026-02-28)
 
-_No pending or in-progress directives._
+### DIRECTIVE-NXTG-20260228-02 — NEXUS Detail Section Cleanup
+**From**: NXTG-AI CoS | **Priority**: P2
+**Injected**: 2026-02-28 | **Estimate**: S | **Status**: PENDING
+
+> **Estimate key**: S = hours (same session), M = 1-2 days, L = 3+ days
+
+**Action Items**:
+1. [ ] Reconcile the Initiative Details section with the Executive Dashboard — N-10 (Claim Graph) should show SHIPPED in details, N-12 (Weakest-Link) should show correct status per dashboard
+2. [ ] Verify all 868 tests still pass (`npm test`)
+3. [ ] Update NEXUS changelog with current session status
+
+**Response** (filled by project team):
+>
 
 ---
 
