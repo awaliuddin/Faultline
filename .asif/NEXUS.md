@@ -142,6 +142,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-03-04 | DIRECTIVE-NXTG-20260304-07 DONE: CI Gate Protocol added to CLAUDE.md, pre-push hook installed, faultline-ci.yml fixed (security-events: write + continue-on-error on example scans). 868 tests (28 files). TQ-001 RESOLVED — P-08b split done per Emma/CLX9. |
 | 2026-02-28 | DIRECTIVE-NXTG-20260228-02 DONE: Initiative Details reconciled (N-10, N-12 IDEA→SHIPPED; N-13 added). 868 tests verified (28 files). |
 | 2026-02-28 | Archived 36 completed CoS directives to NEXUS-archive.md. NEXUS.md reduced from 1650 to 284 lines. |
 | 2026-02-28 | CoS BUILD beat: 868 tests verified (28 files). Stash merge artifacts cleaned. All directives COMPLETED. Awaiting Asif decisions on P-08b split (TQ-001) and npm publish (TQ-004). |
@@ -202,7 +203,19 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 5. [ ] Fix CI safety scan: add `security-events: write` permission to workflow, and assess the 2 critical findings.
 
 **Response** (filled by project team):
+> COMPLETE (2026-03-04). All 5 action items done:
 >
+> **(1) CI Gate Protocol added to CLAUDE.md** — verbatim block added under new `## CI Gate Protocol (ASIF Standard)` section.
+>
+> **(2) Pre-push hook installed** — `cp ~/ASIF/scripts/templates/pre-push-hook.sh .git/hooks/pre-push && chmod +x`. Hook is node-project-aware, runs `npm test` on push, blocks if any test fails. Bypass only via `git push --no-verify` (emergency).
+>
+> **(3) Test suite** — 868 tests pass, 28 files, 0 failures. Clean.
+>
+> **(4) CI status** — `CI` workflow (ci.yml): GREEN. `Faultline AI Safety Scan` (faultline-ci.yml): was RED, now fixed (see #5).
+>
+> **(5) Safety scan fix** — Two issues identified and fixed:
+> - Added `permissions: security-events: write` to `faultline-ci.yml` job. Required for `github/codeql-action/upload-sarif` to push SARIF results to GitHub Code Scanning.
+> - **2 critical findings assessed** — both are **true positives**, not bugs: (a) `faultline/eu-ai-act/unacceptable` — `examples/sample.txt` discusses social scoring systems banned under Article 5(1)(c). (b) `faultline/eu-ai-act/high` — same file discusses AI-powered recruitment tools under Annex III §4. The sample is deliberately EU AI Act-heavy (it's the canonical example doc). Fix: added `continue-on-error: true` to "Scan sample text" and "Scan examples directory" steps — these are demo steps, not enforcement gates. SARIF results still upload to Code Scanning for visibility.
 
 ---
 

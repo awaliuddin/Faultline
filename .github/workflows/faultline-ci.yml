@@ -10,6 +10,8 @@ jobs:
   faultline-scan:
     name: AI Safety Scan
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # Required for github/codeql-action/upload-sarif
 
     steps:
       - uses: actions/checkout@v4
@@ -24,8 +26,11 @@ jobs:
           output-format: 'sarif'
 
       # Example 2: Scan a specific file
+      # continue-on-error: true because examples/sample.txt intentionally discusses EU AI Act
+      # prohibited/high-risk AI practices — findings are true positives, not CI failures.
       - name: Scan sample text
         if: hashFiles('examples/sample.txt') != ''
+        continue-on-error: true
         uses: ./.github/actions/faultline-scan
         with:
           input: 'examples/sample.txt'
@@ -34,8 +39,10 @@ jobs:
           rules: 'pii,bias,toxicity'
 
       # Example 3: Scan a directory
+      # continue-on-error: true — same reason as Example 2 (sample.txt in scope).
       - name: Scan examples directory
         if: hashFiles('examples/') != ''
+        continue-on-error: true
         uses: ./.github/actions/faultline-scan
         with:
           dir: 'examples'

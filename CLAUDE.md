@@ -48,6 +48,16 @@ npm test             # Run Vitest
 
 ---
 
+## CI Gate Protocol (ASIF Standard)
+Before EVERY `git push`, you MUST:
+1. Run the full test suite (`npm test`)
+2. Verify ZERO failures (xfail/skip OK, failures NOT OK)
+3. If tests fail → fix before pushing. No exceptions.
+4. Include test count in commit message: "Tests: X passed, Y skipped"
+Violating this protocol means broken CI, which means Asif gets spammed.
+
+---
+
 ## ASIF Governance
 
 This project is **P-08** in the ASIF portfolio (AI Trust & Safety vertical). It is governed by the ASIF Chief of Staff.
