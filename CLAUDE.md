@@ -4,8 +4,8 @@
 
 Faultline is a forensic AI claim verification platform. It extracts atomic claims from AI-generated text, verifies them against live web data, and presents a risk scorecard.
 
-**Origin**: Kaggle competition entry using Google AI Studio (Gemini 3 Pro).
-**NEXUS**: `.asif/NEXUS.md` (12 initiatives, 5 vision pillars)
+**Origin**: Started as a Kaggle competition entry (tagged `kaggle-demo-v1`). Promoted to **Faultline Pro (P-08b)** 2026-03-03 by Asif. This branch IS the Pro codebase.
+**NEXUS**: `.asif/NEXUS.md` (13 initiatives, 5 vision pillars)
 
 ## Tech Stack
 
@@ -41,10 +41,10 @@ npm test             # Run Vitest
 
 ## Important Notes
 
-- This repo is the **Kaggle competition entry** — it intentionally uses only Google AI Studio
-- An FM-agnostic version exists in `git stash@{0}` (see ASIF PORTFOLIO.md P-08b)
-- The stash contains multi-provider support (Google/OpenAI/Anthropic/Local), performance modes, and claim graph support
-- Do NOT merge the stash into this repo — it will become a separate project (Faultline Pro)
+- This repo IS **Faultline Pro (P-08b)** — multi-provider (Gemini/OpenAI/Claude), full CLI, EU AI Act compliance
+- The Kaggle-only version is preserved at tag `kaggle-demo-v1` (commit 6e05fcc)
+- A mirror of this repo exists at `~/projects/Faultline-Pro/` (github.com/nxtg-ai/faultline-pro)
+- `git stash@{0}` is a historical artefact — superseded by this branch. Do not act on it.
 
 ---
 
@@ -60,7 +60,7 @@ Violating this protocol means broken CI, which means Asif gets spammed.
 
 ## ASIF Governance
 
-This project is **P-08** in the ASIF portfolio (AI Trust & Safety vertical). It is governed by the ASIF Chief of Staff.
+This project is **P-08b (Faultline Pro)** in the ASIF portfolio (AI Trust & Safety vertical). It is governed by the ASIF Chief of Staff.
 
 **On every session**:
 1. Read `.asif/NEXUS.md` — check the `## CoS Directives` section at the bottom
@@ -78,4 +78,4 @@ Do NOT skip planning on complex directives. Plan mode and agent teams are your s
 
 **Escalation via Team Questions**: When you hit a blocker, need an architecture review, or have a portfolio-level question, add it under `## Team Questions` in your `.asif/NEXUS.md`. Your CoS checks these 3x daily during scheduled enrichment cycles and will respond inline or issue follow-up directives.
 
-**Key constraint**: Do NOT touch `git stash@{0}`. It contains the FM-agnostic version (future P-08b).
+**Note on stash**: `git stash@{0}` is a historical artefact from before the P-08b promotion. It has been superseded by this branch. No constraint on it — it will be dropped in a future cleanup.

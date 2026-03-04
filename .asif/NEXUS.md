@@ -1,7 +1,7 @@
 # NEXUS — Faultline Vision-to-Execution Dashboard
 
 > **Owner**: Asif Waliuddin
-> **Last Updated**: 2026-02-22
+> **Last Updated**: 2026-03-04
 > **North Star**: Build a "trust layer" for AI-generated content — weaponize advanced reasoning to answer: "Can I trust this answer?" Expose the hidden fault lines in AI reasoning before they cause damage.
 
 ---
@@ -124,7 +124,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 547 tests, jsdom + @testing-library/react)
+- Vitest (testing, 868 tests, 28 files, jsdom + @testing-library/react)
 
 ---
 
@@ -142,6 +142,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-03-04 | TQ-001 RESOLVED: CLAUDE.md updated — stale Kaggle framing removed, P-08b promotion acknowledged, stash constraint lifted. NEXUS Last Updated + Tech Stack + TQ-001 status corrected. |
 | 2026-03-04 | DIRECTIVE-NXTG-20260304-07 DONE: CI Gate Protocol added to CLAUDE.md, pre-push hook installed, faultline-ci.yml fixed (security-events: write + continue-on-error on example scans). 868 tests (28 files). TQ-001 RESOLVED — P-08b split done per Emma/CLX9. |
 | 2026-02-28 | DIRECTIVE-NXTG-20260228-02 DONE: Initiative Details reconciled (N-10, N-12 IDEA→SHIPPED; N-13 added). 868 tests verified (28 files). |
 | 2026-02-28 | Archived 36 completed CoS directives to NEXUS-archive.md. NEXUS.md reduced from 1650 to 284 lines. |
@@ -314,9 +315,11 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation from team**: Option 2 or 3. The stash is likely stale. Worth a quick `git stash show -p stash@{0}` to compare what's actually in it before deciding.
 
-**Status**: ESCALATED
+**Status**: RESOLVED
 
 **CoS Response** (2026-02-25): ESCALATED TO ASIF. The question of whether to cherry-pick stash UI, promote the Kaggle multi-provider branch as P-08b, or wait is Asif's strategic call. Leave stash in place. Do NOT merge or delete anything. Status: WAITING ON ASIF.
+
+**Resolution** (2026-03-03, Emma / CLX9 Sr. CoS): Split DONE. This branch IS Faultline Pro (P-08b). Kaggle version tagged `kaggle-demo-v1` at 6e05fcc. Mirror at `~/projects/Faultline-Pro/` (github.com/nxtg-ai/faultline-pro). Asif authorized. CLAUDE.md updated to reflect new reality (2026-03-04).
 
 ---
 
