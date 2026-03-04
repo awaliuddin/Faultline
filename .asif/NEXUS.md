@@ -177,6 +177,35 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 > 36 completed directives archived to NEXUS-archive.md (2026-02-28)
 
+### DIRECTIVE-NXTG-20260304-07 — Adopt CI Gate Protocol
+**From**: NXTG-AI CoS | **Priority**: P0
+**Injected**: 2026-03-04 | **Estimate**: S | **Status**: PENDING
+
+> **Estimate key**: S = hours (same session), M = 1-2 days, L = 3+ days
+
+**Context**: New ASIF standard (`standards/ci-gate-protocol.md`). No push without local test pass. All teams must adopt.
+
+**Action Items**:
+1. [ ] Add CI Gate Protocol section to CLAUDE.md:
+   ```
+   ## CI Gate Protocol (ASIF Standard)
+   Before EVERY `git push`, you MUST:
+   1. Run the full test suite (`npm test`)
+   2. Verify ZERO failures (xfail/skip OK, failures NOT OK)
+   3. If tests fail → fix before pushing. No exceptions.
+   4. Include test count in commit message: "Tests: X passed, Y skipped"
+   Violating this protocol means broken CI, which means Asif gets spammed.
+   ```
+2. [ ] Install pre-push hook: `cp ~/ASIF/scripts/templates/pre-push-hook.sh .git/hooks/pre-push && chmod +x .git/hooks/pre-push`
+3. [ ] Run full test suite. Report current passing count.
+4. [ ] Verify CI is GREEN on GitHub Actions. If RED, fix the root cause before any other work.
+5. [ ] Fix CI safety scan: add `security-events: write` permission to workflow, and assess the 2 critical findings.
+
+**Response** (filled by project team):
+>
+
+---
+
 ### DIRECTIVE-NXTG-20260228-02 — NEXUS Detail Section Cleanup
 **From**: NXTG-AI CoS | **Priority**: P2
 **Injected**: 2026-02-28 | **Estimate**: S | **Status**: DONE
@@ -260,6 +289,7 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 ---
 
 ### TQ-001 — P-08b Split: Is the stash still the split point? (2026-02-24)
+> **RESOLVED 2026-03-03** by Emma (CLX9 Sr. CoS). Split DONE. Faultline-Pro at ~/projects/Faultline-Pro/ (github.com/nxtg-ai/faultline-pro). Kaggle version tagged kaggle-demo-v1 at 6e05fcc. Current main branch became the Pro codebase. Asif authorized.
 **From**: Project Team
 
 **Observation**: PI-001 noted that Faultline Pro (stash) was unique for having multi-provider support. That differentiation is gone — the Kaggle branch now ships Gemini + OpenAI + Claude providers, a full `LLMProvider` interface, a provider registry, confidence calibration, and a CLI. The stash's FM-agnostic architecture has been fully re-implemented here.
