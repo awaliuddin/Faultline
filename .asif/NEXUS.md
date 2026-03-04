@@ -215,6 +215,44 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 **Strategic Path**: P-08b (FM-agnostic rewrite) is where the opportunity is. Current Kaggle codebase → test foundation → P-08b split → EU AI Act compliance mapping → open-source core with enterprise features (study Promptfoo's GTM).
 
+## Team Feedback
+
+### Reflection — 2026-03-03
+
+**1. What did we ship since last check-in?**
+
+Last directive (DIRECTIVE-NXTG-20260228-02) was a P2 housekeeping task: reconcile Initiative Details in NEXUS, verify tests, update changelog. No new features shipped. All 13 initiatives remain at SHIPPED (except N-11 MULTIMODAL which is IDEA). Test count is frozen at **868 tests / 28 files** — clean, no regression. The project is in a steady-state hold pending Asif's decisions on TQ-001 (P-08b split) and TQ-004 (npm publish).
+
+**2. What surprised us?**
+
+Nothing technically surprising this cycle — the work was NEXUS governance, not feature development. The more notable observation: the project has been in maintenance mode for two weeks without a new P1/P0 directive. That's unusual for a portfolio project at this stage. Either the CoS is deliberately letting it coast (awaiting the P-08b decision) or it's at risk of becoming stale while other portfolio projects consume attention.
+
+The test suite at 868 is a genuine strength — 28 files, all mocked, CI-green. But with no new directives touching code, test count decay risk is zero right now, which is good.
+
+**3. Cross-project signals**
+
+- **Provider abstraction pattern**: The `LLMProvider` interface + registry + confidence calibration in this codebase is the most mature provider-agnostic pattern in the portfolio. If any other project is adding a second LLM provider, they should copy this pattern wholesale — not reinvent it.
+- **SARIF output + GitHub Action composite**: The SARIF 2.1.0 output format and the GitHub Actions composite action for CI threshold gating could be useful to any portfolio project doing quality gates. These are essentially CI primitives that could be extracted to a shared tooling layer.
+- **Red-team template library**: 15 templates across 5 categories. If any other project does AI evaluation, this template corpus is a head start.
+
+**4. What would we prioritize next with fresh directives?**
+
+In order:
+1. **P-08b decision** (TQ-001) — this is the blocker for everything. If Asif says "promote this branch as P-08b," we can immediately: drop the Kaggle framing, add the `dependencies: string[]` field to `Claim` (TQ-003), and redesign the extraction prompts. If "wait," then next priority is:
+2. **npm publish** (TQ-004) — pre-publish checklist is approved, just needs Asif's timing go-ahead.
+3. **N-11 Multimodal Upload** — the only remaining IDEA. PDF/image → OCR → claims pipeline. Would complete the five pillars. Medium effort, clear scope.
+4. **Claim dependency graph** (TQ-003 deferred) — the `dependencies?: string[]` extension to `Claim` type. This is the original N-01 + N-10 vision. Deferred to P-08b but worth prioritizing early in that track.
+
+**5. Blockers and questions for CoS**
+
+No new technical blockers. The two open escalations remain live:
+- **TQ-001**: P-08b split decision — this has been WAITING ON ASIF since 2026-02-25. What's the timeline on this? The longer it waits, the more the stash diverges from head.
+- **TQ-004**: npm publish timing — blocking on whether publish happens before or after P-08b split.
+
+New question: **Should the project take on N-11 (Multimodal) while waiting on Asif's P-08b call?** It's self-contained, doesn't touch the provider abstraction or claim schema, and would keep the project active. Or should we hold all feature work until the P-08b decision is made?
+
+---
+
 ## Team Questions
 
 _(Project team: add questions for ASIF CoS here. They will be answered during the next enrichment cycle.)_
