@@ -142,6 +142,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-03-04 | Second-order CoS response analysis: TQ-003 defer condition met (now P-08b), TQ-004 blocker resolved (split done), TQ-006 added (N-11 Multimodal go/no-go). Team follow-ups written on TQ-003 and TQ-004. |
 | 2026-03-04 | TQ-001 RESOLVED: CLAUDE.md updated — stale Kaggle framing removed, P-08b promotion acknowledged, stash constraint lifted. NEXUS Last Updated + Tech Stack + TQ-001 status corrected. |
 | 2026-03-04 | DIRECTIVE-NXTG-20260304-07 DONE: CI Gate Protocol added to CLAUDE.md, pre-push hook installed, faultline-ci.yml fixed (security-events: write + continue-on-error on example scans). 868 tests (28 files). TQ-001 RESOLVED — P-08b split done per Emma/CLX9. |
 | 2026-02-28 | DIRECTIVE-NXTG-20260228-02 DONE: Initiative Details reconciled (N-10, N-12 IDEA→SHIPPED; N-13 added). 868 tests verified (28 files). |
@@ -349,9 +350,11 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: Yes, but requires prompt engineering across all three providers. Suggest sizing as M-L effort — may be worth deferring to P-08b where provider prompts can be designed cleanly from scratch.
 
-**Status**: ANSWERED
+**Status**: ANSWERED — DEFER CONDITION MET
 
 **CoS Response** (2026-02-25): Correct decision to defer to P-08b. Do NOT add the `dependencies` field to the Kaggle-branch `Claim` type now — it would complicate the stash/merge decision. Document the intended field spec in a code comment so it's not lost when P-08b is created.
+
+**Team Follow-up** (2026-03-04): Defer condition is now met — this IS P-08b (TQ-001 resolved 2026-03-03). Code comment already in `types.ts:11-15` per CoS instruction. Requesting green light to implement `dependencies?: string[]` on `Claim` type and update extraction prompts across providers. See TQ-006 for N-11; suggest sequencing claim-dependency work alongside or after.
 
 ---
 
@@ -364,9 +367,26 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: The package is ready functionally. Pre-publish checklist suggestion: (1) run `npm pack --dry-run` to verify included files, (2) verify `npx @nxtg-ai/faultline scan --help` works end-to-end with real providers, (3) tag v0.1.0 release on GitHub, (4) publish. Could be done in one session.
 
-**Status**: ESCALATED
+**Status**: ESCALATED — BLOCKER RESOLVED, AWAITING RE-DECISION
 
 **CoS Response** (2026-02-25): ESCALATED TO ASIF. Pre-publish checklist is approved (verify files, test with real providers, tag v0.1.0, publish). But the timing decision — whether to publish before or after P-08b split — is Asif's call. Do not publish yet. Flag: if Mar 1 is the launch, publishing today would need Asif's explicit go-ahead.
+
+**Team Follow-up** (2026-03-04): The stated blocker — "publish before or after P-08b split" — is now resolved. TQ-001 confirmed the split is DONE as of 2026-03-03. We are P-08b. Pre-publish checklist remains approved. Requesting fresh go/no-go from CoS: is it time to publish `@nxtg-ai/faultline@0.1.0`?
+
+---
+
+### TQ-006 — N-11 Multimodal: green light to proceed? (2026-03-04)
+**From**: Project Team
+
+**Context**: N-11 (Multimodal Upload — PDF/OCR) is the only remaining IDEA in the dashboard. It is the last unshipped pillar (MULTIMODAL). TQ-001 is now resolved — this is Faultline Pro (P-08b), a production codebase, not a Kaggle entry. Feature work is appropriate.
+
+**Question**: Is N-11 approved to build now? Specifically: PDF and image input → OCR text extraction → feed into existing claims pipeline. Self-contained, does not touch provider abstraction, claim schema, or any of the open TQ-003/TQ-004 decisions.
+
+**Scope estimate**: M (1-2 days). Key work: (1) PDF parsing via `pdf-parse` or Gemini native PDF input, (2) image OCR via `tesseract.js` or Gemini Vision, (3) CLI flag `--input-type pdf|image`, (4) tests.
+
+**Recommendation**: Yes — this completes the five NEXUS pillars, is self-contained, and keeps the project active while TQ-003 and TQ-004 await decisions. No dependency on publish timeline.
+
+**Status**: PENDING CoS RESPONSE
 
 ---
 
