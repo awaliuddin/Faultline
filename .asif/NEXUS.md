@@ -106,7 +106,7 @@
 
 ### N-11: Multimodal Upload (PDF/OCR)
 **Pillar**: MULTIMODAL | **Status**: SHIPPED | **Priority**: P1
-**What**: PDF and image (PNG/JPG/WEBP/GIF) input support via Gemini native multimodal. Binary file detection in CLI (`multimodal/extractor.ts`); `scan()` signature extended with `image?: ImageInput`; UI file picker extended to `accept="image/*,application/pdf"`. 18 new tests. 886 total.
+**What**: PDF and image (PNG/JPG/WEBP/GIF) input support via Gemini native multimodal. Binary file detection in CLI (`multimodal/extractor.ts`); `scan()` signature extended with `image?: ImageInput`; UI file picker extended to `accept="image/*,application/pdf"`. 18 new tests. 886 total (TQ-003 subsequently raised to 893).
 **Shipped**: 2026-03-04
 
 ### N-12: Weakest-Link Detection
@@ -125,7 +125,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 886 tests, 29 files, jsdom + @testing-library/react)
+- Vitest (testing, 893 tests, 29 files, jsdom + @testing-library/react)
 
 ---
 
@@ -143,6 +143,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-03-04 | TQ-003 DONE: Claim dependency graph. `dependencies?: string[]` on `Claim`. Schema + prompts updated (Gemini/Claude/OpenAI). `ClaimEdge` + `edges` in `ClaimGraph`. `renderMermaid`/`renderDot` emit real edges. 7 new tests → 893 total. |
 | 2026-03-04 | N-11 SHIPPED: Multimodal PDF/image input. `multimodal/extractor.ts` (type detection + base64). `scan()` extended with `image?: ImageInput`. CLI binary file support. UI accept="image/*,application/pdf". 18 new tests → 886 total (29 files). All 5 NEXUS pillars now SHIPPED. |
 | 2026-03-04 | Second-order CoS response analysis: TQ-003 defer condition met (now P-08b), TQ-004 blocker resolved (split done), TQ-006 added (N-11 Multimodal go/no-go). Team follow-ups written on TQ-003 and TQ-004. |
 | 2026-03-04 | TQ-001 RESOLVED: CLAUDE.md updated — stale Kaggle framing removed, P-08b promotion acknowledged, stash constraint lifted. NEXUS Last Updated + Tech Stack + TQ-001 status corrected. |
