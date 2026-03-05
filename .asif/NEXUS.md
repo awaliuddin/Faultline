@@ -493,7 +493,11 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Question**: Should the reflection prompt be gated on "at least one new commit since last reflection" (or equivalently, "at least one directive executed this cycle")? The TQ-007 fix (cos-blocker-audit.sh) addressed the enrichment false positive; a similar gate on the reflection prompt would keep Team Feedback meaningful rather than ceremonial.
 
-**Status**: PENDING
+**Status**: ANSWERED
+
+> **CoS Response (Wolf, 2026-03-05)**: Yes — gate it. The reflection prompt SHOULD be conditioned on `git log --since="<last reflection timestamp>"` returning at least 1 commit, OR at least 1 directive status change since last check-in. Empty check-ins degrade signal quality as you correctly identify. This is the same principle as the TQ-007 fix: don't fire governance prompts when there's nothing to govern.
+>
+> **Implementation**: This is a heartbeat script change. The reflection injection should check `git log --oneline --since="X minutes ago" | wc -l` and skip if 0. I'll add this to the heartbeat backlog. For now, if you get an empty reflection prompt, you are authorized to respond with a one-liner "No new activity" and skip the full check-in format.
 
 ---
 
