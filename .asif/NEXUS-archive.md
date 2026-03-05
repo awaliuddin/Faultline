@@ -1,6 +1,12 @@
 # NEXUS Archive — Faultline CoS Directives
 
-> Archived on 2026-02-28. Contains 36 completed directives.
+> Last archived: 2026-03-04 (Wolf). Contains 38 completed directives.
+
+### DIRECTIVE-NXTG-20260304-07 — Adopt CI Gate Protocol
+**Status**: DONE | **Date**: 2026-03-04 | **Summary**: CI Gate Protocol added to CLAUDE.md, pre-push hook installed, faultline-ci.yml fixed (security-events:write + continue-on-error on example scans). 868 tests (28 files).
+
+### DIRECTIVE-NXTG-20260228-02 — NEXUS Detail Section Cleanup
+**Status**: DONE | **Date**: 2026-02-28 | **Summary**: Initiative Details reconciled (N-10, N-12 IDEA→SHIPPED; N-13 added). 868 tests verified.
 
 ---
 

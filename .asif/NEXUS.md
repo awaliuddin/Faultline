@@ -178,62 +178,9 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 ## CoS Directives
 
-> 36 completed directives archived to NEXUS-archive.md (2026-02-28)
+> 38 completed directives archived to NEXUS-archive.md (2026-03-04)
 
-### DIRECTIVE-NXTG-20260304-07 — Adopt CI Gate Protocol
-**From**: NXTG-AI CoS | **Priority**: P0
-**Injected**: 2026-03-04 | **Estimate**: S | **Status**: DONE
-
-> **Estimate key**: S = hours (same session), M = 1-2 days, L = 3+ days
-
-**Context**: New ASIF standard (`standards/ci-gate-protocol.md`). No push without local test pass. All teams must adopt.
-
-**Action Items**:
-1. [ ] Add CI Gate Protocol section to CLAUDE.md:
-   ```
-   ## CI Gate Protocol (ASIF Standard)
-   Before EVERY `git push`, you MUST:
-   1. Run the full test suite (`npm test`)
-   2. Verify ZERO failures (xfail/skip OK, failures NOT OK)
-   3. If tests fail → fix before pushing. No exceptions.
-   4. Include test count in commit message: "Tests: X passed, Y skipped"
-   Violating this protocol means broken CI, which means Asif gets spammed.
-   ```
-2. [ ] Install pre-push hook: `cp ~/ASIF/scripts/templates/pre-push-hook.sh .git/hooks/pre-push && chmod +x .git/hooks/pre-push`
-3. [ ] Run full test suite. Report current passing count.
-4. [ ] Verify CI is GREEN on GitHub Actions. If RED, fix the root cause before any other work.
-5. [ ] Fix CI safety scan: add `security-events: write` permission to workflow, and assess the 2 critical findings.
-
-**Response** (filled by project team):
-> COMPLETE (2026-03-04). All 5 action items done:
->
-> **(1) CI Gate Protocol added to CLAUDE.md** — verbatim block added under new `## CI Gate Protocol (ASIF Standard)` section.
->
-> **(2) Pre-push hook installed** — `cp ~/ASIF/scripts/templates/pre-push-hook.sh .git/hooks/pre-push && chmod +x`. Hook is node-project-aware, runs `npm test` on push, blocks if any test fails. Bypass only via `git push --no-verify` (emergency).
->
-> **(3) Test suite** — 868 tests pass, 28 files, 0 failures. Clean.
->
-> **(4) CI status** — `CI` workflow (ci.yml): GREEN. `Faultline AI Safety Scan` (faultline-ci.yml): was RED, now fixed (see #5).
->
-> **(5) Safety scan fix** — Two issues identified and fixed:
-> - Added `permissions: security-events: write` to `faultline-ci.yml` job. Required for `github/codeql-action/upload-sarif` to push SARIF results to GitHub Code Scanning.
-> - **2 critical findings assessed** — both are **true positives**, not bugs: (a) `faultline/eu-ai-act/unacceptable` — `examples/sample.txt` discusses social scoring systems banned under Article 5(1)(c). (b) `faultline/eu-ai-act/high` — same file discusses AI-powered recruitment tools under Annex III §4. The sample is deliberately EU AI Act-heavy (it's the canonical example doc). Fix: added `continue-on-error: true` to "Scan sample text" and "Scan examples directory" steps — these are demo steps, not enforcement gates. SARIF results still upload to Code Scanning for visibility.
-
----
-
-### DIRECTIVE-NXTG-20260228-02 — NEXUS Detail Section Cleanup
-**From**: NXTG-AI CoS | **Priority**: P2
-**Injected**: 2026-02-28 | **Estimate**: S | **Status**: DONE
-
-> **Estimate key**: S = hours (same session), M = 1-2 days, L = 3+ days
-
-**Action Items**:
-1. [ ] Reconcile the Initiative Details section with the Executive Dashboard — N-10 (Claim Graph) should show SHIPPED in details, N-12 (Weakest-Link) should show correct status per dashboard
-2. [ ] Verify all 868 tests still pass (`npm test`)
-3. [ ] Update NEXUS changelog with current session status
-
-**Response** (filled by project team):
-> COMPLETE (2026-02-28). (1) N-10 Initiative Details updated: IDEA→SHIPPED with delivery note. N-12 Initiative Details updated: IDEA→SHIPPED with CLI command description. N-13 added to Initiative Details section (was missing). (2) 868 tests pass (28 files). (3) Changelog updated below.
+_No active directives._
 
 ---
 
@@ -386,7 +333,15 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: Yes — this completes the five NEXUS pillars, is self-contained, and keeps the project active while TQ-003 and TQ-004 await decisions. No dependency on publish timeline.
 
-**Status**: PENDING CoS RESPONSE
+**Status**: ANSWERED — GREEN LIGHT
+
+**CoS Response** (2026-03-04, Wolf): **YES — N-11 approved to build.** Reasoning:
+1. P-08b split is done — this is production, not Kaggle. Feature work appropriate.
+2. Self-contained scope (no provider abstraction or claim schema changes).
+3. Completes the 5th and final NEXUS pillar (MULTIMODAL).
+4. M estimate is reasonable. Prefer Gemini native PDF input over `pdf-parse` where possible (fewer deps, better accuracy).
+5. TQ-003 (claim dependencies) is also GREEN LIGHT — defer condition met. Sequence at team's discretion (N-11 first or TQ-003 first, both approved).
+6. TQ-004 (npm publish) — ESCALATED to Emma/Asif. This is a product visibility decision. Wolf cannot authorize public package release.
 
 ---
 
