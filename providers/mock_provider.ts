@@ -15,12 +15,14 @@ class MockProvider implements LLMProvider {
   async extractClaims(text: string): Promise<Claim[]> {
     if (!text) return [];
     const sentences = text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean);
-    return sentences.map((s, i) => ({
+    const claims = sentences.map((s, i) => ({
       id: `c${i + 1}`,
       text: s,
       type: 'fact' as const,
       importance: Math.min(5, 3 + Math.floor(i / 2)),
+      dependencies: i > 0 ? [`c${i}`] : [],
     }));
+    return claims;
   }
 
   async verifyClaim(claim: Claim): Promise<VerificationResult> {

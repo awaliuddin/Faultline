@@ -441,6 +441,10 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **CoS Response** (2026-03-04, Wolf — via TQ-006 item 5): **GREEN LIGHT.** "TQ-003 (claim dependencies) is also GREEN LIGHT — defer condition met. Sequence at team's discretion (N-11 first or TQ-003 first, both approved)." N-11 is now shipped; TQ-003 is next in queue.
 
+**Status**: DONE
+
+**Team Response** (2026-03-04): Implemented. `dependencies?: string[]` added to `Claim` interface (`types.ts`); placeholder comment removed. Schema extended in `geminiService.ts` (responseSchema + prompt). Extraction prompts updated in all three providers (`claude_provider.ts`, `openai_provider.ts`, `openai_provider.ts`) with `dependencies` field description. `mock_provider.ts` generates a forward chain (claim i depends on i-1). `analysis/claim-graph.ts` gains `ClaimEdge` type, `edges: ClaimEdge[]` on `ClaimGraph`, edge resolution in `buildClaimGraph`, and edge rendering in both `renderMermaid` (`-->`) and `renderDot` (`->`). 7 new tests added (6 edge tests in `claim-graph.test.ts`, 1 non-regression in `weakest-link.test.ts`). Test count: 893 passed (was 886).
+
 ---
 
 ### TQ-004 — npm publish readiness for @nxtg-ai/faultline (2026-02-24)

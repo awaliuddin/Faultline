@@ -26,10 +26,18 @@ export interface ClaimNode {
   confidenceScore: number;
 }
 
+export interface ClaimEdge {
+  fromNodeId: string;  // dependency (must hold first)
+  toNodeId: string;    // dependent claim
+  fromClaimId: string;
+  toClaimId: string;
+}
+
 export interface ClaimGraph {
   nodes: ClaimNode[];
   /** Claims grouped by EU risk tier. Every tier key is always present. */
   nodesByTier: Record<EURiskTier, ClaimNode[]>;
+  edges: ClaimEdge[];
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +199,21 @@ export function buildClaimGraph(
     nodesByTier[node.euTier].push(node);
   }
 
-  return { nodes, nodesByTier };
+  const claimIdToNodeId = new Map(nodes.map(n => [n.claimId, n.nodeId]));
+
+  const edges: ClaimEdge[] = [];
+  for (const claim of claims) {
+    const toNodeId = claimIdToNodeId.get(claim.id);
+    if (!toNodeId || !claim.dependencies?.length) continue;
+    for (const depId of claim.dependencies) {
+      const fromNodeId = claimIdToNodeId.get(depId);
+      if (fromNodeId) {
+        edges.push({ fromNodeId, toNodeId, fromClaimId: depId, toClaimId: claim.id });
+      }
+    }
+  }
+
+  return { nodes, nodesByTier, edges };
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +249,11 @@ export function renderMermaid(graph: ClaimGraph): string {
   lines.push(`  classDef unverified fill:${STATUS_COLORS.unverified},color:#fff,stroke:#374151`);
   lines.push(`  classDef loading fill:${STATUS_COLORS.loading},color:#fff,stroke:#475569`);
   lines.push(`  classDef skipped fill:${STATUS_COLORS.skipped},color:#fff,stroke:#475569`);
+
+  // dependency edges
+  for (const edge of graph.edges) {
+    lines.push(`  ${edge.fromNodeId} --> ${edge.toNodeId}`);
+  }
 
   // class assignments — one per node.
   for (const node of graph.nodes) {
@@ -276,6 +303,11 @@ export function renderDot(graph: ClaimGraph): string {
     }
 
     lines.push('  }');
+  }
+
+  // dependency edges
+  for (const edge of graph.edges) {
+    lines.push(`  "${edge.fromNodeId}" -> "${edge.toNodeId}";`);
   }
 
   lines.push('}');

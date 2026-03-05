@@ -38,7 +38,8 @@ Return a JSON object with a "claims" key containing an array where each object h
 - id: a unique string ID (e.g., "c1")
 - text: the specific claim as a standalone sentence
 - type: one of "fact" (verifiable), "opinion" (subjective), "interpretation" (inference)
-- importance: integer 1-5 (5 being critical to the argument's integrity)`,
+- importance: integer 1-5 (5 being critical to the argument's integrity)
+- dependencies: array of IDs of other claims in this document that this claim logically requires to be true (e.g., ["c1"]). Leave as [] if none.`,
     });
 
     try {

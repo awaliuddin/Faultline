@@ -8,11 +8,7 @@ export interface Claim {
   text: string;
   type: ClaimType;
   importance: number; // 1 to 5
-  // P-08b NOTE (TQ-003): Add `dependencies?: string[]` — array of claim IDs that this
-  // claim logically depends on being true. Required for true weakest-chain traversal and
-  // full claim-graph visualization. Deferred from Kaggle branch to avoid complicating
-  // the stash/merge decision. Extraction prompts for all three providers will need updating
-  // to identify logical dependencies when this is added.
+  dependencies?: string[]; // claim IDs this claim logically requires to hold
 }
 
 export interface VerificationResult {

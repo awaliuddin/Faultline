@@ -60,6 +60,7 @@ export const extractClaims = async (text: string, apiKey: string, image?: { data
     - text: the specific claim as a standalone sentence
     - type: one of "fact" (verifiable), "opinion" (subjective), "interpretation" (inference)
     - importance: integer 1-5 (5 being critical to the argument's integrity)
+    - dependencies: array of IDs of other claims in this document that this claim logically requires to be true. Leave empty if none.
   `;
 
   try {
@@ -82,8 +83,9 @@ export const extractClaims = async (text: string, apiKey: string, image?: { data
             properties: {
               id: { type: 'STRING' },
               text: { type: 'STRING' },
-              type: { type: 'STRING' }, 
+              type: { type: 'STRING' },
               importance: { type: 'INTEGER' },
+              dependencies: { type: 'ARRAY', items: { type: 'STRING' } },
             },
             required: ["id", "text", "type", "importance"]
           }

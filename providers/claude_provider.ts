@@ -41,6 +41,7 @@ Return a JSON array where each object has:
 - text: the specific claim as a standalone sentence
 - type: one of "fact" (verifiable), "opinion" (subjective), "interpretation" (inference)
 - importance: integer 1-5 (5 being critical to the argument's integrity)
+- dependencies: array of IDs of other claims in this document that this claim logically requires to be true (e.g., ["c1"]). Leave as [] if none.
 
 Return ONLY the JSON array, no other text.`,
     });

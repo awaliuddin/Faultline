@@ -507,4 +507,17 @@ describe('analyzeWeakestLinks - claims without verifications excluded', () => {
     expect(result.rankedClaims[0].claimId).toBe('c2');
     expect(result.weakestClaim!.claimId).toBe('c2');
   });
+
+  it('ignores dependencies field — findWeakestClaim still works when claims have dependencies', () => {
+    const claims = [
+      makeTestClaim({ id: 'c1', dependencies: [] }),
+      makeTestClaim({ id: 'c2', dependencies: ['c1'] }),
+    ];
+    const verifications = {
+      c2: makeTestVerification('c2', 'contradicted'),
+    };
+    const result = analyzeWeakestLinks(claims, verifications, report);
+    expect(result.weakestClaim).toBeDefined();
+    expect(result.weakestClaim!.claimId).toBe('c2');
+  });
 });

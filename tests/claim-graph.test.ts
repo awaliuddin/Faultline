@@ -10,6 +10,7 @@ import {
   TIER_COLORS,
   type ClaimNode,
   type ClaimGraph,
+  type ClaimEdge,
   type EURiskTier,
   type GraphNodeStatus,
 } from '../analysis/claim-graph';
@@ -510,5 +511,90 @@ describe('renderDot — empty graph', () => {
     const dot = renderDot(graph);
     expect(dot.startsWith('digraph')).toBe(true);
     expect(dot.trimEnd().endsWith('}')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. Dependency edges — buildClaimGraph (4 tests)
+// ---------------------------------------------------------------------------
+
+describe('buildClaimGraph — dependency edges', () => {
+  it('edges is [] when no claims have dependencies', () => {
+    const claims = [
+      makeClaim({ id: 'c1' }),
+      makeClaim({ id: 'c2' }),
+    ];
+    const graph = buildClaimGraph(claims, {}, makeComplianceReport());
+    expect(graph.edges).toEqual([]);
+  });
+
+  it('single dependency produces one edge with correct nodeIds', () => {
+    const claims = [
+      makeClaim({ id: 'c1' }),
+      makeClaim({ id: 'c2', dependencies: ['c1'] }),
+    ];
+    const graph = buildClaimGraph(claims, {}, makeComplianceReport());
+    expect(graph.edges).toHaveLength(1);
+    const edge = graph.edges[0];
+    const c1Node = graph.nodes.find(n => n.claimId === 'c1')!;
+    const c2Node = graph.nodes.find(n => n.claimId === 'c2')!;
+    expect(edge.fromNodeId).toBe(c1Node.nodeId);
+    expect(edge.toNodeId).toBe(c2Node.nodeId);
+    expect(edge.fromClaimId).toBe('c1');
+    expect(edge.toClaimId).toBe('c2');
+  });
+
+  it('edge direction is dep → dependent (not reversed)', () => {
+    const claims = [
+      makeClaim({ id: 'dep' }),
+      makeClaim({ id: 'dependent', dependencies: ['dep'] }),
+    ];
+    const graph = buildClaimGraph(claims, {}, makeComplianceReport());
+    expect(graph.edges).toHaveLength(1);
+    const depNode = graph.nodes.find(n => n.claimId === 'dep')!;
+    const dependentNode = graph.nodes.find(n => n.claimId === 'dependent')!;
+    expect(graph.edges[0].fromNodeId).toBe(depNode.nodeId);
+    expect(graph.edges[0].toNodeId).toBe(dependentNode.nodeId);
+  });
+
+  it('missing dep claimId is silently skipped', () => {
+    const claims = [
+      makeClaim({ id: 'c1', dependencies: ['nonexistent'] }),
+    ];
+    expect(() => buildClaimGraph(claims, {}, makeComplianceReport())).not.toThrow();
+    const graph = buildClaimGraph(claims, {}, makeComplianceReport());
+    expect(graph.edges).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 12. Dependency edges — renderMermaid and renderDot (2 tests)
+// ---------------------------------------------------------------------------
+
+describe('renderMermaid — dependency edges', () => {
+  it('emits --> line for each edge', () => {
+    const claims = [
+      makeClaim({ id: 'c1' }),
+      makeClaim({ id: 'c2', dependencies: ['c1'] }),
+    ];
+    const graph = buildClaimGraph(claims, {}, makeComplianceReport());
+    const mermaid = renderMermaid(graph);
+    const c1Node = graph.nodes.find(n => n.claimId === 'c1')!;
+    const c2Node = graph.nodes.find(n => n.claimId === 'c2')!;
+    expect(mermaid).toContain(`${c1Node.nodeId} --> ${c2Node.nodeId}`);
+  });
+});
+
+describe('renderDot — dependency edges', () => {
+  it('emits -> line for each edge', () => {
+    const claims = [
+      makeClaim({ id: 'c1' }),
+      makeClaim({ id: 'c2', dependencies: ['c1'] }),
+    ];
+    const graph = buildClaimGraph(claims, {}, makeComplianceReport());
+    const dot = renderDot(graph);
+    const c1Node = graph.nodes.find(n => n.claimId === 'c1')!;
+    const c2Node = graph.nodes.find(n => n.claimId === 'c2')!;
+    expect(dot).toContain(`"${c1Node.nodeId}" -> "${c2Node.nodeId}";`);
   });
 });
