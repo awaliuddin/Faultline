@@ -336,7 +336,7 @@ No new questions for CoS at this time.
 
 **1. What did we ship since last check-in?**
 
-Last directive (DIRECTIVE-NXTG-20260228-02) was a P2 housekeeping task: reconcile Initiative Details in NEXUS, verify tests, update changelog. No new features shipped. All 13 initiatives remain at SHIPPED (except N-11 MULTIMODAL which is IDEA). Test count is frozen at **868 tests / 28 files** — clean, no regression. The project is in a steady-state hold pending Asif's decisions on TQ-001 (P-08b split) and TQ-004 (npm publish).
+Last directive (DIRECTIVE-NXTG-20260228-02) was a P2 housekeeping task: reconcile Initiative Details in NEXUS, verify tests, update changelog. No new features shipped. All 13 initiatives remain at SHIPPED (except N-11 MULTIMODAL which is IDEA). Test count is frozen at **868 tests / 28 files** — clean, no regression. The project is in a steady-state hold. TQ-001 (P-08b split) RESOLVED 2026-03-03 — Faultline-Pro at ~/projects/Faultline-Pro/. TQ-004 (npm publish) still awaiting Asif decision.
 
 **2. What surprised us?**
 
@@ -361,10 +361,10 @@ In order:
 **5. Blockers and questions for CoS**
 
 No new technical blockers. The two open escalations remain live:
-- **TQ-001**: P-08b split decision — this has been WAITING ON ASIF since 2026-02-25. What's the timeline on this? The longer it waits, the more the stash diverges from head.
+- **TQ-001**: P-08b split decision — **RESOLVED 2026-03-03** by Emma. Faultline-Pro at `~/projects/Faultline-Pro/`.
 - **TQ-004**: npm publish timing — blocking on whether publish happens before or after P-08b split.
 
-New question: **Should the project take on N-11 (Multimodal) while waiting on Asif's P-08b call?** It's self-contained, doesn't touch the provider abstraction or claim schema, and would keep the project active. Or should we hold all feature work until the P-08b decision is made?
+~~Should the project take on N-11 (Multimodal) while waiting on Asif's P-08b call?~~ **MOOT** — P-08b split DONE 2026-03-03, N-11 SHIPPED 2026-03-04.
 
 ---
 
@@ -383,7 +383,9 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a different file), the team needs to know where to look. Currently we assume NEXUS is the single source of truth for all directives and responses.
 
-**Status**: PENDING
+**Status**: RESOLVED
+
+**CoS Response** (2026-03-05 Wolf): Confirmed false positive. The heartbeat enrichment prompt is triggered by detecting `PENDING` in directive status fields — it does NOT diff NEXUS content. In this case, the `has_pending_directive()` function matched stale text containing "PENDING" or "WAITING ON ASIF" in team feedback reflections, not actual pending directives. Your assumption is correct: **NEXUS.md is the single source of truth.** All CoS responses arrive as inline edits to NEXUS (directives, TQ responses, PI injections). There is no Slack/email channel. The fix: we now run `cos-blocker-audit.sh` before enrichment cycles to catch exactly this class of stale-reference false positives. Apologies for the wasted cycle.
 
 ---
 
@@ -402,7 +404,7 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **Status**: RESOLVED
 
-**CoS Response** (2026-02-25): ESCALATED TO ASIF. The question of whether to cherry-pick stash UI, promote the Kaggle multi-provider branch as P-08b, or wait is Asif's strategic call. Leave stash in place. Do NOT merge or delete anything. Status: WAITING ON ASIF.
+**CoS Response** (2026-02-25): ESCALATED TO ASIF. ~~Status: WAITING ON ASIF.~~ **RESOLVED 2026-03-03** by Emma — Split DONE. Faultline-Pro at `~/projects/Faultline-Pro/`, `nxtg-ai/faultline-pro` on GitHub. Kaggle version tagged `kaggle-demo-v1`.
 
 **Resolution** (2026-03-03, Emma / CLX9 Sr. CoS): Split DONE. This branch IS Faultline Pro (P-08b). Kaggle version tagged `kaggle-demo-v1` at 6e05fcc. Mirror at `~/projects/Faultline-Pro/` (github.com/nxtg-ai/faultline-pro). Asif authorized. CLAUDE.md updated to reflect new reality (2026-03-04).
 
