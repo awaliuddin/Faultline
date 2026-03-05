@@ -211,6 +211,74 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-05
+
+**1. What did we ship since last check-in?**
+
+**TQ-003: Claim Dependency Graph** — the last meaningful schema gap in the platform.
+
+Deliverables (commit `1ab147f`):
+- `types.ts` — `dependencies?: string[]` added to `Claim` interface; 5-line placeholder comment removed
+- `services/geminiService.ts` — `dependencies` array added to responseSchema + extraction prompt updated
+- `providers/claude_provider.ts` — `dependencies` field description added to extraction prompt
+- `providers/openai_provider.ts` — same
+- `providers/mock_provider.ts` — forward-chain generation: claim `c_i` depends on `c_{i-1}` (i > 0)
+- `analysis/claim-graph.ts` — `ClaimEdge` type, `edges: ClaimEdge[]` on `ClaimGraph`, edge resolution in `buildClaimGraph`, `-->` lines in `renderMermaid`, `->` lines in `renderDot`
+- `tests/claim-graph.test.ts` — 6 new edge tests (empty edges, single edge, direction correctness, missing dep silently skipped, Mermaid output, DOT output)
+- `tests/weakest-link.test.ts` — 1 non-regression test confirming `analyzeWeakestLinks` ignores `dependencies`
+
+**Test count: 886 → 893 (+7). 29 files. All pass. Build clean.**
+
+Also: TQ-007 root cause identified and resolved by Wolf (CoS). The `has_pending_directive()` enrichment function was pattern-matching "PENDING"/"WAITING ON ASIF" in team reflection prose — triggering 5 false-positive enrichment cycles. Fix deployed on CoS side (`cos-blocker-audit.sh`). Four stale blocker refs cleaned from NEXUS by Asif in commit `d841736`.
+
+---
+
+**2. What surprised us?**
+
+**Edge direction is more subtle than it looks.** The plan specified `fromNodeId → toNodeId` as "dependency → dependent" (i.e., the arrow points *toward* the claim that needs the dependency to hold). This is semantically correct but counterintuitive if you read it as a flow diagram — visually, the arrow looks like it flows *from* the thing you need *to* the thing that depends on it. Mermaid renders it exactly that way. This is correct for a prerequisite graph (DAG-style), but worth documenting for any future consumer of `ClaimEdge`.
+
+**The nodeId-to-claimId mapping is sorting-order sensitive.** `buildClaimGraph` assigns `nodeId = 'c' + index` during `claims.map()` (pre-sort), then sorts nodes by tier severity. The edge-resolution code (`claimIdToNodeId`) is built from the post-map, pre-sort nodes — which is correct, since `nodeId` is fixed at map time. But if someone refactors the order of operations (e.g., sort before map), the mapping would break silently. Added a comment to the code flagging this invariant.
+
+Wait — actually the comment wasn't added during implementation. Worth noting here as tech debt: `buildClaimGraph` has an implicit ordering invariant (map → assign nodeId → sort) that isn't guarded by a test. A refactor could break edge resolution silently.
+
+**Mock provider chain dependencies are useful for testing but semantically meaningless.** The forward chain (c2 depends on c1, c3 on c2) makes every claim downstream of the first — which is fine for asserting edge presence, but it means mock scan output always shows a linear dependency chain regardless of content. If someone uses mock output to evaluate graph layouts, they'll see an artificially linear structure. Acceptable for CI testing, worth noting if mock output is ever shown in demos.
+
+---
+
+**3. Cross-project signals**
+
+- **Claim dependency as a general DAG pattern**: The `ClaimEdge` → `buildClaimGraph` → `renderMermaid`/`renderDot` pipeline is a clean, typed DAG implementation. Any portfolio project that needs to visualize entity relationships (e.g., task dependencies, code module dependencies, compliance rule chains) could reuse the same pattern: assign stable node IDs pre-sort, resolve edges via a Map lookup, emit format-specific output in renderers. ~50 lines of clean TypeScript.
+
+- **Prompt schema and natural-language instruction must agree**: The Gemini responseSchema now includes `dependencies` but the field isn't in `required` — so the model can omit it without validation failure. The prompt instruction says "Leave empty if none." This is intentional (backward-compatible with older responses), but any portfolio project using Gemini structured output should be aware: `required` in responseSchema is enforced strictly; optional fields are best left out of `required` and handled by the consumer with `?? []` or similar.
+
+- **`vi.spyOn` on `node:fs` remains a dead end in ESM** — documented in prior reflection (Check-in 1), confirmed again this cycle. Still the pattern to avoid across all Vitest + ESM projects.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+1. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`**. This is the only open decision. The package now has all 5 pillars, 893 tests, full dependency graph in the schema. It's the most complete it will ever be pre-publish. Pre-publish checklist from 2026-02-25 is approved. Waiting on Asif/Emma.
+
+2. **`scan()` options bag refactor** — convert `scan(text, image?, providerName?, minConfidence?, ruleNames?)` to `scan(text, options?: ScanOptions)`. Currently 5 positional args; adding any future input (e.g., `ruleSet`, `timeout`) would require another cascade of call-site touches. This is P2 internal hygiene, but the right time to do it is before the npm publish locks in the public API surface.
+
+3. **`buildClaimGraph` ordering invariant guard** — add a test or comment asserting that `nodeId` assignment precedes sort. Currently a silent footgun for future refactors.
+
+4. **Weakest-link traversal using actual dependency edges** — `analysis/weakest-link.ts` currently scores claims individually by fragility. Now that `dependencies` is in the schema and edges are wired, true chain traversal is possible: propagate fragility scores upstream through the dependency graph (a claim whose dependency is contradicted is itself at elevated risk). This is the original N-01 + N-12 vision fully realized. M effort.
+
+---
+
+**5. Blockers and questions for CoS**
+
+No technical blockers.
+
+One open decision:
+- **TQ-004**: npm publish `@nxtg-ai/faultline@0.1.0`. With 893 tests, all 5 pillars shipped, and claim dependency graph now in the schema, this is the strongest the package has ever been. Is the publish authorized? If yes, team can execute the pre-approved checklist (pack dry-run, end-to-end verify, tag v0.1.0, publish) in a single session.
+
+One process observation:
+- The `buildClaimGraph` ordering invariant (map → assign nodeId → sort) is currently undocumented and untestedby intent. If CoS wants a directive to add a guard comment or test, the team can add it. Otherwise treating it as acceptable tech debt.
+
+---
+
 ### Reflection — 2026-03-04 (Check-in 2)
 
 **1. What did we ship since last check-in?**
