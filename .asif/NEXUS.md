@@ -211,6 +211,50 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-05 (Check-in 4)
+
+**1. What did we ship since last check-in?**
+
+Nothing new shipped. No directives were issued; the session was enrichment-prompt read cycles only.
+
+Last commit remains `5dcc2ce` (reflection check-in 3). Test count unchanged: **893 / 29 files**. CI green. Remote in sync.
+
+---
+
+**2. What surprised us?**
+
+Nothing technically surprising this cycle. The notable observation is process-level: the reflection prompt is firing on a schedule similar to the enrichment prompt, even when there is nothing new to reflect on. Two consecutive empty check-ins (nothing shipped, no new directives, no blockers changed) creates low signal-to-noise. Worth flagging — see question for CoS below.
+
+---
+
+**3. Cross-project signals**
+
+None new. All cross-project signals from check-in 3 remain current:
+- `ClaimEdge` DAG pattern reusable for any entity-relationship visualization
+- Gemini optional schema fields should stay out of `required` and be consumed with `?? []`
+- `vi.spyOn` on `node:fs` is a dead end in ESM Vitest
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+Unchanged from check-in 3:
+
+1. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`** — single open decision, awaiting Asif go/no-go. Package is at peak readiness: 893 tests, all 5 pillars, full dependency graph schema.
+2. **`scan()` options bag refactor** — convert 5 positional args to `ScanOptions` bag before the public API surface is locked in by npm publish.
+3. **Weakest-link traversal using dependency edges** — propagate fragility scores upstream through the `ClaimEdge` graph. The original N-01 + N-12 vision fully realized. Unblocked now that TQ-003 is shipped.
+4. **`buildClaimGraph` ordering invariant guard** — document/test that nodeId assignment precedes sort; currently a silent footgun.
+
+---
+
+**5. Blockers and questions for CoS**
+
+**TQ-004** remains the only open decision. No change in status.
+
+**New question — TQ-008**: The reflection prompt (like the enrichment prompt pre-TQ-007 fix) appears to fire on a schedule regardless of whether there is new work to reflect on. Two consecutive empty check-ins (Check-in 3 had content; Check-in 4 has none) suggests the reflection cadence may be too high relative to the directive cadence in a steady-state hold. Should the reflection prompt be gated on "at least one new commit since last reflection"? That would prevent low-signal check-ins and keep the Team Feedback section meaningful. Happy to write this up as a TQ if useful.
+
+---
+
 ### Reflection — 2026-03-05
 
 **1. What did we ship since last check-in?**
@@ -439,6 +483,17 @@ No new technical blockers. The two open escalations remain live:
 ## Team Questions
 
 _(Project team: add questions for ASIF CoS here. They will be answered during the next enrichment cycle.)_
+
+---
+
+### TQ-008 — Reflection prompt firing without new work (2026-03-05)
+**From**: Project Team
+
+**Observation**: The reflection prompt is firing on a schedule regardless of whether there is new work to reflect on. Check-in 4 (this entry) has nothing to report — no new commits, no directive changes, no surprises. The Team Feedback section now contains back-to-back empty check-ins, which degrades its signal value.
+
+**Question**: Should the reflection prompt be gated on "at least one new commit since last reflection" (or equivalently, "at least one directive executed this cycle")? The TQ-007 fix (cos-blocker-audit.sh) addressed the enrichment false positive; a similar gate on the reflection prompt would keep Team Feedback meaningful rather than ceremonial.
+
+**Status**: PENDING
 
 ---
 
