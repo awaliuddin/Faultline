@@ -25,7 +25,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("File size too large. Please select an image under 5MB.");
+        alert("File size too large. Please select a file under 5MB.");
         return;
       }
       const reader = new FileReader();
@@ -77,7 +77,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isProcess
                  type="file" 
                  ref={fileInputRef} 
                  onChange={handleFileSelect} 
-                 accept="image/*" 
+                 accept="image/*,application/pdf"
                  className="hidden" 
                />
                

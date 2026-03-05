@@ -202,7 +202,7 @@ export async function processFileChange(
   debouncer.record(filePath);
 
   try {
-    const result = await scan(text, options.provider, options.minConfidence, options.ruleNames);
+    const result = await scan(text, undefined, options.provider, options.minConfidence, options.ruleNames);
     const format = options.outputFormat || 'json';
     const reportOutput = renderReportAs(result, format);
 

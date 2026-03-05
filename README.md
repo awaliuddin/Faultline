@@ -31,6 +31,8 @@ npm install
 export GEMINI_API_KEY="your-key"   # or ANTHROPIC_API_KEY / OPENAI_API_KEY
 
 npx tsx cli/index.ts scan --input document.txt --provider gemini
+npx tsx cli/index.ts scan --input report.pdf --provider gemini       # PDF input (Gemini native)
+npx tsx cli/index.ts scan --input screenshot.png --provider gemini   # image input
 npx tsx cli/index.ts scan --input document.txt --provider claude --output-format markdown
 npx tsx cli/index.ts scan --input document.txt --sarif              # writes results.sarif
 npx tsx cli/index.ts weakest --input document.txt                   # weakest-link claim

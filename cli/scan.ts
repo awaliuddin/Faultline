@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { Claim, VerificationResult, AnalysisState } from '../types.js';
-import type { LLMProvider } from '../providers/base_provider.js';
+import type { LLMProvider, ImageInput } from '../providers/base_provider.js';
 import { getProvider } from '../providers/registry.js';
 import { generateComplianceReport, type ComplianceReport } from '../compliance/report_generator.js';
 import { runAllRules, runRules, type Finding } from '../rules/index.js';
@@ -35,7 +35,7 @@ function filterClaimsForVerification(claims: Claim[]): Claim[] {
     .slice(0, 8);
 }
 
-export async function scan(text: string, providerName?: string, minConfidence?: number, ruleNames?: string[]): Promise<ScanResult> {
+export async function scan(text: string, image?: ImageInput, providerName?: string, minConfidence?: number, ruleNames?: string[]): Promise<ScanResult> {
   const resolvedProvider = providerName || 'gemini';
 
   let apiKey = '';
@@ -57,7 +57,7 @@ export async function scan(text: string, providerName?: string, minConfidence?: 
 
   const provider: LLMProvider = getProvider(apiKey, resolvedProvider);
 
-  const claims = await provider.extractClaims(text);
+  const claims = await provider.extractClaims(text, image);
   const toVerify = filterClaimsForVerification(claims);
 
   const verifications: Record<string, VerificationResult> = {};
@@ -73,7 +73,7 @@ export async function scan(text: string, providerName?: string, minConfidence?: 
     : runAllRules(text);
 
   return {
-    input: text.substring(0, 200),
+    input: text ? text.substring(0, 200) : `[${image?.mimeType ?? 'binary'} input]`,
     provider: provider.name,
     claims,
     verifications,
@@ -164,7 +164,7 @@ export async function batchScan(
         filesSkipped++;
         continue;
       }
-      const result = await scan(text, providerName, minConfidence);
+      const result = await scan(text, undefined, providerName, minConfidence);
       results.push({ file: relative(dir, file), result });
     } catch {
       filesSkipped++;

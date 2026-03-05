@@ -10,6 +10,8 @@
 
 import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { isBinaryFile, getImageInput } from '../multimodal/extractor.js';
+import type { ImageInput } from '../providers/base_provider.js';
 import { scan, batchScan } from './scan.js';
 import { renderReport, renderReportAs, type OutputFormat, type SarifOptions } from './report.js';
 import { listRules, getRule } from '../rules/index.js';
@@ -258,7 +260,7 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       const weakConfig = loadConfig();
       const { provider: weakProvider, minConfidence: weakMinConf } = mergeFlags(weakConfig, flags);
 
-      const weakResult = await scan(weakText, weakProvider, weakMinConf);
+      const weakResult = await scan(weakText, undefined, weakProvider, weakMinConf);
       const topN = flags['top'] ? parseInt(flags['top'], 10) : 5;
       const weakAnalysis = analyzeWeakestLinks(weakResult.claims, weakResult.verifications, weakResult.complianceReport);
 
@@ -289,7 +291,7 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
       const graphConfig = loadConfig();
       const { provider: graphProvider, minConfidence: graphMinConf } = mergeFlags(graphConfig, flags);
 
-      const graphResult = await scan(graphText, graphProvider, graphMinConf);
+      const graphResult = await scan(graphText, undefined, graphProvider, graphMinConf);
       const claimGraph = buildClaimGraph(graphResult.claims, graphResult.verifications, graphResult.complianceReport);
 
       const graphOutput = graphFormat === 'dot' ? renderDot(claimGraph) : renderMermaid(claimGraph);
@@ -330,7 +332,7 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
         }
       }
 
-      const critScanResult = await scan(critText, resolvedCritProvider, critMinConf);
+      const critScanResult = await scan(critText, undefined, resolvedCritProvider, critMinConf);
 
       const { getProvider: getCritProvider } = await import('../providers/registry.js');
       const critProvider = getCritProvider(critApiKey, resolvedCritProvider);
@@ -402,7 +404,7 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
 
         const templateResults: Array<{ templateId: string; category: string; severity: string; prompt: string; result: import('./scan.js').ScanResult }> = [];
         for (const tmpl of templates) {
-          const result = await scan(tmpl.prompt_text, providerName, minConfidence, ruleNames);
+          const result = await scan(tmpl.prompt_text, undefined, providerName, minConfidence, ruleNames);
           templateResults.push({
             templateId: tmpl.id,
             category: tmpl.category,
@@ -483,12 +485,18 @@ export async function main(args: string[]): Promise<{ exitCode: number; output: 
         return { exitCode: 1, output: `Error: File not found: ${resolved}` };
       }
 
-      const text = readFileSync(resolved, 'utf-8').trim();
-      if (!text) {
-        return { exitCode: 1, output: 'Error: Input file is empty.' };
+      let text = '';
+      let image: ImageInput | undefined;
+      if (isBinaryFile(resolved)) {
+        image = getImageInput(resolved)!;
+      } else {
+        text = readFileSync(resolved, 'utf-8').trim();
+        if (!text) {
+          return { exitCode: 1, output: 'Error: Input file is empty.' };
+        }
       }
 
-      const result = await scan(text, providerName, minConfidence, ruleNames);
+      const result = await scan(text, image, providerName, minConfidence, ruleNames);
 
       // Save to history
       const scanHistoryDir = flags['history-dir'] || undefined;

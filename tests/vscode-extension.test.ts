@@ -210,7 +210,7 @@ describe('VS Code Extension: parseSarifToDiagnostics', () => {
     const { scan } = await import('../cli/scan');
     const { renderReportAs } = await import('../cli/report');
 
-    const result = await scan('AI recruitment tools use social scoring to evaluate candidates.', 'mock');
+    const result = await scan('AI recruitment tools use social scoring to evaluate candidates.', undefined, 'mock');
     const sarifOutput = renderReportAs(result, 'sarif');
     const diags = parseSarifToDiagnostics(sarifOutput);
 

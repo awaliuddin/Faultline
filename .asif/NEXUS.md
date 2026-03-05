@@ -20,7 +20,7 @@
 | N-08 | Test Coverage Expansion | — | SHIPPED | P0 | 2026-02 |
 | N-09 | CI/CD Pipeline | — | SHIPPED | P0 | 2026-02 |
 | N-10 | Claim Graph Visualization | FORENSIC | SHIPPED | P1 | 2026-02 |
-| N-11 | Multimodal Upload (PDF/OCR) | MULTIMODAL | IDEA | P1 | — |
+| N-11 | Multimodal Upload (PDF/OCR) | MULTIMODAL | SHIPPED | P1 | 2026-03-04 |
 | N-12 | Weakest-Link Detection | FORENSIC | SHIPPED | P1 | 2026-02 |
 | N-13 | Critique + Improved Prompt | SYNTHESIS | SHIPPED | P1 | 2026-02 |
 
@@ -55,7 +55,7 @@
 ### MULTIMODAL — "Beyond Text"
 - Accept screenshots, PDFs, and other inputs
 - OCR extraction as entry point to claims pipeline
-- **Ideas**: N-11
+- **Shipped**: N-11
 
 ---
 
@@ -105,8 +105,9 @@
 **What**: Network/DAG visualization showing dependency graph of claims. Delivered via EU risk tier grouping as proxy for dependency graph (true claim dependency deferred to P-08b per TQ-003).
 
 ### N-11: Multimodal Upload (PDF/OCR)
-**Pillar**: MULTIMODAL | **Status**: IDEA | **Priority**: P1
-**What**: Image/PDF OCR extraction as entry point to claims pipeline.
+**Pillar**: MULTIMODAL | **Status**: SHIPPED | **Priority**: P1
+**What**: PDF and image (PNG/JPG/WEBP/GIF) input support via Gemini native multimodal. Binary file detection in CLI (`multimodal/extractor.ts`); `scan()` signature extended with `image?: ImageInput`; UI file picker extended to `accept="image/*,application/pdf"`. 18 new tests. 886 total.
+**Shipped**: 2026-03-04
 
 ### N-12: Weakest-Link Detection
 **Pillar**: FORENSIC | **Status**: SHIPPED | **Priority**: P1
@@ -124,7 +125,7 @@
 - Google Custom Search API (web grounding)
 - React 19, TypeScript, Tailwind CSS, Vite
 - Express.js (optional backend proxy)
-- Vitest (testing, 868 tests, 28 files, jsdom + @testing-library/react)
+- Vitest (testing, 886 tests, 29 files, jsdom + @testing-library/react)
 
 ---
 
@@ -142,6 +143,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 
 | Date | Change |
 |------|--------|
+| 2026-03-04 | N-11 SHIPPED: Multimodal PDF/image input. `multimodal/extractor.ts` (type detection + base64). `scan()` extended with `image?: ImageInput`. CLI binary file support. UI accept="image/*,application/pdf". 18 new tests → 886 total (29 files). All 5 NEXUS pillars now SHIPPED. |
 | 2026-03-04 | Second-order CoS response analysis: TQ-003 defer condition met (now P-08b), TQ-004 blocker resolved (split done), TQ-006 added (N-11 Multimodal go/no-go). Team follow-ups written on TQ-003 and TQ-004. |
 | 2026-03-04 | TQ-001 RESOLVED: CLAUDE.md updated — stale Kaggle framing removed, P-08b promotion acknowledged, stash constraint lifted. NEXUS Last Updated + Tech Stack + TQ-001 status corrected. |
 | 2026-03-04 | DIRECTIVE-NXTG-20260304-07 DONE: CI Gate Protocol added to CLAUDE.md, pre-push hook installed, faultline-ci.yml fixed (security-events: write + continue-on-error on example scans). 868 tests (28 files). TQ-001 RESOLVED — P-08b split done per Emma/CLX9. |
@@ -207,6 +209,73 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 **Strategic Path**: P-08b (FM-agnostic rewrite) is where the opportunity is. Current Kaggle codebase → test foundation → P-08b split → EU AI Act compliance mapping → open-source core with enterprise features (study Promptfoo's GTM).
 
 ## Team Feedback
+
+### Reflection — 2026-03-04
+
+**1. What did we ship since last check-in?**
+
+**N-11: Multimodal Upload (PDF + Image Support)** — the last unshipped NEXUS pillar. All 5 pillars are now SHIPPED.
+
+Deliverables:
+- `multimodal/extractor.ts` (NEW) — `isBinaryFile()` + `getImageInput()`: extension-based MIME detection, `readFileSync` → base64, covers PDF/PNG/JPG/JPEG/WEBP/GIF
+- `cli/scan.ts` — `scan()` signature extended: `(text, image?, providerName?, ...)`. `extractClaims(text, image)` wired through. `input` snapshot handles image-only inputs gracefully.
+- `cli/index.ts` — single-file mode now detects binary files and routes to `getImageInput()` instead of `readFileSync(utf-8)`. All 5 other `scan()` call sites updated with explicit `undefined` image arg.
+- `cli/watch.ts` — same call-site fix.
+- `components/InputSection.tsx` — `accept="image/*,application/pdf"`. Error message drop "image".
+- `tests/multimodal-extractor.test.ts` (NEW) — 18 tests: all 6 MIME types, case-insensitive extension matching, unsupported extension → null, base64 encoding, binary round-trip. Uses real temp files (avoids ESM spy limitations on `node:fs`).
+- `tests/vscode-extension.test.ts` — fixed `scan('text', 'mock')` → `scan('text', undefined, 'mock')` (signature migration).
+- `README.md` — PDF/image CLI examples added.
+- `NEXUS.md` — N-11 IDEA → SHIPPED, Tech Stack corrected to 886 tests, changelog entry.
+
+**Test count: 868 → 886 (+18). 29 files. All pass. Build clean.**
+
+---
+
+**2. What surprised us?**
+
+**ESM + `vi.spyOn` on `node:fs` is a dead end.** Initial test design used `vi.mock('node:fs', factory)` and then `vi.spyOn(fs, 'readFileSync')` — both hit ESM module namespace immutability walls (`Cannot redefine property: readFileSync`). The `vi.mock` approach also failed because `node:fs` has a default export that the factory must forward or Vitest throws. Switched to real temp files (`mkdtempSync` + `writeFileSync` + `rmSync`) — which is actually cleaner, tests actual I/O, and matches the pattern used everywhere else in this codebase.
+
+**Signature change ripple was wider than expected.** The plan identified `cli/index.ts` (line ~491) as the change point, but `scan()` is called from 6 locations across 3 files: `cli/index.ts` (×5), `cli/watch.ts` (×1), and `tests/vscode-extension.test.ts` (×1 — this one wasn't in scope in the plan and caused a real test failure before we caught it). The lesson: any core function signature change needs a `grep -rn` across the full codebase before merging, not just the files listed in the plan.
+
+**Gemini native PDF input requires zero new dependencies.** The green light preference for "Gemini native PDF input over `pdf-parse`" (Wolf's TQ-006 response) turned out to be the right call — the existing `ImageInput { data, mimeType }` type already handles PDFs identically to images. No API surface change, no new deps, just adding `'application/pdf'` to the MIME map. Clean.
+
+---
+
+**3. Cross-project signals**
+
+- **Binary → base64 pattern for multimodal APIs**: `multimodal/extractor.ts` is ~25 lines and fully reusable. Any portfolio project sending files to Gemini Vision or Claude Vision needs exactly this: extension → MIME type map, `readFileSync` buffer, `.toString('base64')`. Worth extracting to a shared NXTG-AI utility if another project hits this.
+
+- **ESM test isolation constraint**: `vi.spyOn` on Node built-in modules (`node:fs`, `node:path`, `node:crypto`) fails silently or throws in ESM mode. Other portfolio projects using Vitest + ESM should either (a) use real temp files/fixtures, or (b) wrap Node built-ins in a thin module and mock that module instead. This is a gotcha that will bite any project that mocks Node internals.
+
+- **Scan signature extensibility**: Adding `image?` as the second parameter of `scan()` rather than a trailing options object required touching every call site. If TQ-003 (claim dependencies) or future features add more optional pipeline inputs, an options bag pattern (`scan(text, options?: ScanOptions)`) would contain the blast radius. Worth considering before TQ-003 lands.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+In order:
+
+1. **TQ-003 — Claim dependency graph** (`dependencies?: string[]` on `Claim`). This is now GREEN LIGHT from Wolf (TQ-006 response, item 5). It's the original N-01 + N-10 vision and the last meaningful schema gap. Work: add field to `types.ts`, update extraction prompts across all 3 providers + `geminiService.ts`, update tests. M-L effort. Would unlock true weakest-chain traversal.
+
+2. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`**. Still waiting on Emma/Asif. With N-11 shipped, the package now has all 5 pillars. A v0.1.0 publish at this milestone would be meaningful. Pre-publish checklist remains approved from 2026-02-25.
+
+3. **Tech stack entry cleanup** — `NEXUS.md` Tech Stack still says "868 tests, 28 files" (stale from before this session). Minor but should stay accurate.
+
+4. **`scan()` options bag refactor** — before TQ-003 adds another parameter, convert `scan(text, image?, providerName?, minConfidence?, ruleNames?)` to `scan(text, options?: ScanOptions)`. Prevents future signature churn.
+
+---
+
+**5. Blockers and questions for CoS**
+
+No technical blockers.
+
+Open items:
+- **TQ-004**: npm publish go/no-go — still waiting on Emma/Asif. With all 5 pillars now shipped and 886 tests, the package is more complete than at the original checklist approval. Is there now a stronger case for a v0.1.0 tag?
+- **TQ-003 sequencing**: Wolf greenlit TQ-003 alongside N-11. Should claim dependencies land before or after the npm publish? If it ships before publish, v0.1.0 gets the full graph capability. If after, the publish is cleaner/faster but the schema is still incomplete.
+
+No new questions for CoS at this time.
+
+---
 
 ### Reflection — 2026-03-03
 
