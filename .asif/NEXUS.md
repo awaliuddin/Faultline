@@ -210,6 +210,60 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-04 (Check-in 2)
+
+**1. What did we ship since last check-in?**
+
+Nothing new shipped. This cycle was a CoS read + sync check only.
+
+Commit since last reflection: none. Git status is clean. Remote (`origin/main`) is at `fbbd9b8` — identical to local HEAD. The last commit (`feat(N-11)`) was pushed at the end of Check-in 1 and CI gate passed cleanly (886/886 tests).
+
+The session work was: (1) read NEXUS for new CoS responses, (2) verified local and remote are in sync, (3) confirmed TQ status.
+
+---
+
+**2. What surprised us?**
+
+**No new CoS responses exist — but the prompt said there were some.** The enrichment cycle prompt ("The CoS has responded to your Team Questions") appears to be standing protocol rather than a signal that content was literally added. After `git fetch` and `git diff HEAD origin/main`, the remote NEXUS is byte-for-byte identical to local. No new CoS content anywhere.
+
+This is worth flagging as a workflow signal: the "CoS has responded" prompt should probably only be sent when there is actual new content in NEXUS to act on, otherwise it creates a false-urgency read cycle. Noting this for CoS awareness.
+
+**TQ-003 green light is technically already on the record**, but embedded in TQ-006's response rather than TQ-003's own entry. It's easy to miss because TQ-003's status still reads "ANSWERED — DEFER CONDITION MET" and the team follow-up requesting build authorization has no direct CoS reply inline. From a governance hygiene standpoint, TQ-003 should be updated to "GREEN LIGHT" with a pointer to the TQ-006 Wolf response. Doing that now.
+
+---
+
+**3. Cross-project signals**
+
+- **Governance protocol gap**: The CoS enrichment cycle prompt should be conditioned on actual NEXUS changes. Sending it unconditionally trains the team to do expensive read + sync cycles that return nothing. If the CoS tooling can gate the prompt on a `git diff` of NEXUS since last check-in, that would sharpen the signal-to-noise ratio across all portfolio projects.
+
+- **TQ cross-referencing**: When a CoS response to one TQ implicitly answers another (as Wolf's TQ-006 item 5 did for TQ-003), both TQ entries should be updated simultaneously. Otherwise the answered TQ shows a stale "awaiting response" state that creates confusion on future read cycles. This is a process note for CoS writers, not a code issue.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+Same as Check-in 1, no change in order:
+
+1. **TQ-003 — Claim dependency graph** (`dependencies?: string[]` on `Claim`). GREEN LIGHT from Wolf. This is the highest-value unblocked work: completes the original N-01 + N-10 vision, enables true weakest-chain traversal, and requires meaningful prompt engineering across all 3 providers. M-L scope. Before starting, I'd refactor `scan()` to an options bag to avoid another call-site cascade (see reflection Check-in 1, point 3).
+
+2. **TQ-004 — npm publish** (`@nxtg-ai/faultline@0.1.0`). Still on Emma/Asif. No action until they respond.
+
+3. If TQ-003 and TQ-004 are both blocked: **`scan()` options bag refactor** is a clean P2 internal improvement that prevents the next signature change from requiring 6 call-site touches.
+
+---
+
+**5. Blockers and questions for CoS**
+
+**New question — TQ-007**:
+
+The "CoS has responded" enrichment prompt was sent but no new NEXUS content existed. Is this a false positive in the enrichment tooling, or did a response exist somewhere outside NEXUS (email, Slack, a different file) that I should be reading? If responses can arrive outside NEXUS.md, the team needs to know where to look.
+
+**Existing open items** (unchanged):
+- TQ-003: Awaiting direct inline response in TQ-003 entry (Wolf's green light is in TQ-006; TQ-003 entry should be updated for clarity).
+- TQ-004: Awaiting Emma/Asif publish decision.
+
+---
+
 ### Reflection — 2026-03-04
 
 **1. What did we ship since last check-in?**
@@ -319,6 +373,19 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 ---
 
+### TQ-007 — Enrichment prompt fired with no new NEXUS content (2026-03-04)
+**From**: Project Team
+
+**Observation**: The "CoS has responded to your Team Questions" enrichment prompt was sent, but after `git fetch` + `git diff HEAD origin/main`, no new content existed in NEXUS.md. Local and remote are identical. The team performed a full read cycle and sync check with no actionable output.
+
+**Question**: Is the enrichment prompt conditioned on actual NEXUS changes, or is it sent on a fixed schedule regardless? If the latter — can it be gated on `git diff` of NEXUS since last team check-in, so it only fires when there is genuinely new CoS content to act on? This would eliminate false-urgency read cycles across all portfolio projects.
+
+Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a different file), the team needs to know where to look. Currently we assume NEXUS is the single source of truth for all directives and responses.
+
+**Status**: PENDING
+
+---
+
 ### TQ-001 — P-08b Split: Is the stash still the split point? (2026-02-24)
 > **RESOLVED 2026-03-03** by Emma (CLX9 Sr. CoS). Split DONE. Faultline-Pro at ~/projects/Faultline-Pro/ (github.com/nxtg-ai/faultline-pro). Kaggle version tagged kaggle-demo-v1 at 6e05fcc. Current main branch became the Pro codebase. Asif authorized.
 **From**: Project Team
@@ -366,11 +433,13 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Recommendation**: Yes, but requires prompt engineering across all three providers. Suggest sizing as M-L effort — may be worth deferring to P-08b where provider prompts can be designed cleanly from scratch.
 
-**Status**: ANSWERED — DEFER CONDITION MET
+**Status**: GREEN LIGHT
 
 **CoS Response** (2026-02-25): Correct decision to defer to P-08b. Do NOT add the `dependencies` field to the Kaggle-branch `Claim` type now — it would complicate the stash/merge decision. Document the intended field spec in a code comment so it's not lost when P-08b is created.
 
 **Team Follow-up** (2026-03-04): Defer condition is now met — this IS P-08b (TQ-001 resolved 2026-03-03). Code comment already in `types.ts:11-15` per CoS instruction. Requesting green light to implement `dependencies?: string[]` on `Claim` type and update extraction prompts across providers. See TQ-006 for N-11; suggest sequencing claim-dependency work alongside or after.
+
+**CoS Response** (2026-03-04, Wolf — via TQ-006 item 5): **GREEN LIGHT.** "TQ-003 (claim dependencies) is also GREEN LIGHT — defer condition met. Sequence at team's discretion (N-11 first or TQ-003 first, both approved)." N-11 is now shipped; TQ-003 is next in queue.
 
 ---
 
