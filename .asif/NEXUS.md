@@ -598,11 +598,13 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **Recommendation**: The package is ready functionally. Pre-publish checklist suggestion: (1) run `npm pack --dry-run` to verify included files, (2) verify `npx @nxtg-ai/faultline scan --help` works end-to-end with real providers, (3) tag v0.1.0 release on GitHub, (4) publish. Could be done in one session.
 
-**Status**: ESCALATED — BLOCKER RESOLVED, AWAITING RE-DECISION
+**Status**: RESOLVED — GO AUTHORIZED BY ASIF (2026-03-05)
 
 **CoS Response** (2026-02-25): ESCALATED TO ASIF. Pre-publish checklist is approved (verify files, test with real providers, tag v0.1.0, publish). But the timing decision — whether to publish before or after P-08b split — is Asif's call. Do not publish yet. Flag: if Mar 1 is the launch, publishing today would need Asif's explicit go-ahead.
 
 **Team Follow-up** (2026-03-04): The stated blocker — "publish before or after P-08b split" — is now resolved. TQ-001 confirmed the split is DONE as of 2026-03-03. We are P-08b. Pre-publish checklist remains approved. Requesting fresh go/no-go from CoS: is it time to publish `@nxtg-ai/faultline@0.1.0`?
+
+**CoS Response** (2026-03-05, Wolf): **GO — AUTHORIZED BY ASIF.** Asif gave explicit go-ahead on 2026-03-05. Decisions locked: License changed to Apache-2.0, revenue model is open-core + EU AI Act compliance wedge. Phase 1 = free CLI adoption. Faultline-Pro (P-08b) is the publish vehicle — `@nxtg-ai/faultline@0.1.0` prepared there with 868 tests, Apache-2.0, examples, pre-publish checklist complete. Asif will pull the trigger on `npm publish` after `npm login`. **This team (P-08, Kaggle original) does NOT need to publish** — P-08b handles it. Your 893 tests and N-11 multimodal work are the foundation. Well done.
 
 ---
 
