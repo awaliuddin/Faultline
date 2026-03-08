@@ -150,7 +150,7 @@ IDEA ──> RESEARCHED ──> DECIDED ──> BUILDING ──> SHIPPED
 | 2026-03-04 | DIRECTIVE-NXTG-20260304-07 DONE: CI Gate Protocol added to CLAUDE.md, pre-push hook installed, faultline-ci.yml fixed (security-events: write + continue-on-error on example scans). 868 tests (28 files). TQ-001 RESOLVED — P-08b split done per Emma/CLX9. |
 | 2026-02-28 | DIRECTIVE-NXTG-20260228-02 DONE: Initiative Details reconciled (N-10, N-12 IDEA→SHIPPED; N-13 added). 868 tests verified (28 files). |
 | 2026-02-28 | Archived 36 completed CoS directives to NEXUS-archive.md. NEXUS.md reduced from 1650 to 284 lines. |
-| 2026-02-28 | CoS BUILD beat: 868 tests verified (28 files). Stash merge artifacts cleaned. All directives COMPLETED. Awaiting Asif decisions on P-08b split (TQ-001) and npm publish (TQ-004). |
+| 2026-02-28 | CoS BUILD beat: 868 tests verified (28 files). Stash merge artifacts cleaned. All directives COMPLETED. ~~Awaiting Asif decisions on P-08b split (TQ-001) and npm publish (TQ-004).~~ Both RESOLVED: TQ-001 split DONE 2026-03-03; TQ-004 npm GO 2026-03-05 (Apache-2.0). |
 | 2026-02-23 | Report aggregation: multi-file summary, risk heatmap, 4 output formats, faultline aggregate CLI. 547 tests, 22 files. |
 | 2026-02-23 | Confidence score calibration: per-provider normalization to 0-100, linear/logarithmic curves, profile registry. 505 tests, 21 files. |
 | 2026-02-23 | Multi-provider abstraction: formalized MockProvider, eliminated scan.ts special-case, mock registered in registry. 473 tests, 20 files. |
@@ -252,7 +252,7 @@ None new. All cross-project signals from check-in 3 remain current:
 
 Unchanged from check-in 3:
 
-1. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`** — single open decision, awaiting Asif go/no-go. Package is at peak readiness: 893 tests, all 5 pillars, full dependency graph schema.
+1. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`** — ~~single open decision, awaiting Asif go/no-go.~~ **RESOLVED 2026-03-05 — GO authorized, Apache-2.0.** Package is at peak readiness: 893 tests, all 5 pillars, full dependency graph schema.
 2. **`scan()` options bag refactor** — convert 5 positional args to `ScanOptions` bag before the public API surface is locked in by npm publish.
 3. **Weakest-link traversal using dependency edges** — propagate fragility scores upstream through the `ClaimEdge` graph. The original N-01 + N-12 vision fully realized. Unblocked now that TQ-003 is shipped.
 4. **`buildClaimGraph` ordering invariant guard** — document/test that nodeId assignment precedes sort; currently a silent footgun.
@@ -313,7 +313,7 @@ Wait — actually the comment wasn't added during implementation. Worth noting h
 
 **4. What would we prioritize next with fresh directives?**
 
-1. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`**. This is the only open decision. The package now has all 5 pillars, 893 tests, full dependency graph in the schema. It's the most complete it will ever be pre-publish. Pre-publish checklist from 2026-02-25 is approved. Waiting on Asif/Emma.
+1. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`**. ~~This is the only open decision. Waiting on Asif/Emma.~~ **RESOLVED 2026-03-05 — GO authorized, Apache-2.0.** The package has all 5 pillars, 893 tests, full dependency graph in the schema. Pre-publish checklist from 2026-02-25 is approved. P-08b handles the publish.
 
 2. **`scan()` options bag refactor** — convert `scan(text, image?, providerName?, minConfidence?, ruleNames?)` to `scan(text, options?: ScanOptions)`. Currently 5 positional args; adding any future input (e.g., `ruleSet`, `timeout`) would require another cascade of call-site touches. This is P2 internal hygiene, but the right time to do it is before the npm publish locks in the public API surface.
 
@@ -385,7 +385,7 @@ The "CoS has responded" enrichment prompt was sent but no new NEXUS content exis
 
 **Existing open items** (unchanged):
 - TQ-003: Awaiting direct inline response in TQ-003 entry (Wolf's green light is in TQ-006; TQ-003 entry should be updated for clarity).
-- TQ-004: Awaiting Emma/Asif publish decision.
+- TQ-004: ~~Awaiting Emma/Asif publish decision.~~ **RESOLVED 2026-03-05 — GO authorized, Apache-2.0.**
 
 ---
 
@@ -436,7 +436,7 @@ In order:
 
 1. **TQ-003 — Claim dependency graph** (`dependencies?: string[]` on `Claim`). This is now GREEN LIGHT from Wolf (TQ-006 response, item 5). It's the original N-01 + N-10 vision and the last meaningful schema gap. Work: add field to `types.ts`, update extraction prompts across all 3 providers + `geminiService.ts`, update tests. M-L effort. Would unlock true weakest-chain traversal.
 
-2. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`**. Still waiting on Emma/Asif. With N-11 shipped, the package now has all 5 pillars. A v0.1.0 publish at this milestone would be meaningful. Pre-publish checklist remains approved from 2026-02-25.
+2. **TQ-004 — npm publish `@nxtg-ai/faultline@0.1.0`**. ~~Still waiting on Emma/Asif.~~ **RESOLVED 2026-03-05 — GO authorized, Apache-2.0.** With N-11 shipped, the package now has all 5 pillars. P-08b handles the publish.
 
 3. **Tech stack entry cleanup** — `NEXUS.md` Tech Stack still says "868 tests, 28 files" (stale from before this session). Minor but should stay accurate.
 
@@ -449,7 +449,7 @@ In order:
 No technical blockers.
 
 Open items:
-- **TQ-004**: npm publish go/no-go — still waiting on Emma/Asif. With all 5 pillars now shipped and 886 tests, the package is more complete than at the original checklist approval. Is there now a stronger case for a v0.1.0 tag?
+- **TQ-004**: ~~npm publish go/no-go — still waiting on Emma/Asif.~~ **RESOLVED 2026-03-05 — GO authorized by Asif, Apache-2.0, P-08b handles publish.** With all 5 pillars now shipped and 886 tests, the package is more complete than at the original checklist approval.
 - **TQ-003 sequencing**: Wolf greenlit TQ-003 alongside N-11. Should claim dependencies land before or after the npm publish? If it ships before publish, v0.1.0 gets the full graph capability. If after, the publish is cleaner/faster but the schema is still incomplete.
 
 No new questions for CoS at this time.
@@ -460,7 +460,7 @@ No new questions for CoS at this time.
 
 **1. What did we ship since last check-in?**
 
-Last directive (DIRECTIVE-NXTG-20260228-02) was a P2 housekeeping task: reconcile Initiative Details in NEXUS, verify tests, update changelog. No new features shipped. All 13 initiatives remain at SHIPPED (except N-11 MULTIMODAL which is IDEA). Test count is frozen at **868 tests / 28 files** — clean, no regression. The project is in a steady-state hold. TQ-001 (P-08b split) RESOLVED 2026-03-03 — Faultline-Pro at ~/projects/Faultline-Pro/. TQ-004 (npm publish) still awaiting Asif decision.
+Last directive (DIRECTIVE-NXTG-20260228-02) was a P2 housekeeping task: reconcile Initiative Details in NEXUS, verify tests, update changelog. No new features shipped. All 13 initiatives remain at SHIPPED (except N-11 MULTIMODAL which is IDEA). Test count is frozen at **868 tests / 28 files** — clean, no regression. The project is in a steady-state hold. TQ-001 (P-08b split) RESOLVED 2026-03-03 — Faultline-Pro at ~/projects/Faultline-Pro/. TQ-004 (npm publish) ~~still awaiting Asif decision~~ **RESOLVED 2026-03-05 — GO authorized, Apache-2.0.**
 
 **2. What surprised us?**
 
@@ -486,7 +486,7 @@ In order:
 
 No new technical blockers. The two open escalations remain live:
 - **TQ-001**: P-08b split decision — **RESOLVED 2026-03-03** by Emma. Faultline-Pro at `~/projects/Faultline-Pro/`.
-- **TQ-004**: npm publish timing — blocking on whether publish happens before or after P-08b split.
+- **TQ-004**: ~~npm publish timing — blocking on whether publish happens before or after P-08b split.~~ **RESOLVED: split DONE 2026-03-03, npm GO 2026-03-05 (Apache-2.0). P-08b handles publish.**
 
 ~~Should the project take on N-11 (Multimodal) while waiting on Asif's P-08b call?~~ **MOOT** — P-08b split DONE 2026-03-03, N-11 SHIPPED 2026-03-04.
 
@@ -627,7 +627,7 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 3. Completes the 5th and final NEXUS pillar (MULTIMODAL).
 4. M estimate is reasonable. Prefer Gemini native PDF input over `pdf-parse` where possible (fewer deps, better accuracy).
 5. TQ-003 (claim dependencies) is also GREEN LIGHT — defer condition met. Sequence at team's discretion (N-11 first or TQ-003 first, both approved).
-6. TQ-004 (npm publish) — ESCALATED to Emma/Asif. This is a product visibility decision. Wolf cannot authorize public package release.
+6. TQ-004 (npm publish) — ~~ESCALATED to Emma/Asif.~~ **RESOLVED 2026-03-05 — GO authorized by Asif. Apache-2.0, open-core model. P-08b handles publish.**
 
 ---
 
