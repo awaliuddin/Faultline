@@ -498,14 +498,13 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 ---
 
-### TQ-008 — Reflection prompt firing without new work (2026-03-05)
+### TQ-008 — Reflection prompt firing without new work
+**Status**: ANSWERED | **Date**: 2026-03-05
 **From**: Project Team
 
 **Observation**: The reflection prompt is firing on a schedule regardless of whether there is new work to reflect on. Check-in 4 (this entry) has nothing to report — no new commits, no directive changes, no surprises. The Team Feedback section now contains back-to-back empty check-ins, which degrades its signal value.
 
 **Question**: Should the reflection prompt be gated on "at least one new commit since last reflection" (or equivalently, "at least one directive executed this cycle")? The TQ-007 fix (cos-blocker-audit.sh) addressed the enrichment false positive; a similar gate on the reflection prompt would keep Team Feedback meaningful rather than ceremonial.
-
-**Status**: ANSWERED
 
 > **CoS Response (Wolf, 2026-03-05)**: Yes — gate it. The reflection prompt SHOULD be conditioned on `git log --since="<last reflection timestamp>"` returning at least 1 commit, OR at least 1 directive status change since last check-in. Empty check-ins degrade signal quality as you correctly identify. This is the same principle as the TQ-007 fix: don't fire governance prompts when there's nothing to govern.
 >
@@ -513,7 +512,8 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 ---
 
-### TQ-007 — Enrichment prompt fired with no new NEXUS content (2026-03-04)
+### TQ-007 — Enrichment prompt fired with no new NEXUS content
+**Status**: RESOLVED | **Date**: 2026-03-04
 **From**: Project Team
 
 **Observation**: The "CoS has responded to your Team Questions" enrichment prompt was sent, but after `git fetch` + `git diff HEAD origin/main`, no new content existed in NEXUS.md. Local and remote are identical. The team performed a full read cycle and sync check with no actionable output.
@@ -522,15 +522,15 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a different file), the team needs to know where to look. Currently we assume NEXUS is the single source of truth for all directives and responses.
 
-**Status**: RESOLVED
-
 **CoS Response** (2026-03-05 Wolf): Confirmed false positive. The heartbeat enrichment prompt is triggered by detecting `PENDING` in directive status fields — it does NOT diff NEXUS content. In this case, the `has_pending_directive()` function matched stale text containing "PENDING" or "WAITING ON ASIF" in team feedback reflections, not actual pending directives. Your assumption is correct: **NEXUS.md is the single source of truth.** All CoS responses arrive as inline edits to NEXUS (directives, TQ responses, PI injections). There is no Slack/email channel. The fix: we now run `cos-blocker-audit.sh` before enrichment cycles to catch exactly this class of stale-reference false positives. Apologies for the wasted cycle.
 
 ---
 
-### TQ-001 — P-08b Split: Is the stash still the split point? (2026-02-24)
-> **RESOLVED 2026-03-03** by Emma (CLX9 Sr. CoS). Split DONE. Faultline-Pro at ~/projects/Faultline-Pro/ (github.com/nxtg-ai/faultline-pro). Kaggle version tagged kaggle-demo-v1 at 6e05fcc. Current main branch became the Pro codebase. Asif authorized.
+### TQ-001 — P-08b Split: Is the stash still the split point?
+**Status**: RESOLVED | **Date**: 2026-02-24
 **From**: Project Team
+
+> **RESOLVED 2026-03-03** by Emma (CLX9 Sr. CoS). Split DONE. Faultline-Pro at ~/projects/Faultline-Pro/ (github.com/nxtg-ai/faultline-pro). Kaggle version tagged kaggle-demo-v1 at 6e05fcc. Current main branch became the Pro codebase. Asif authorized.
 
 **Observation**: PI-001 noted that Faultline Pro (stash) was unique for having multi-provider support. That differentiation is gone — the Kaggle branch now ships Gemini + OpenAI + Claude providers, a full `LLMProvider` interface, a provider registry, confidence calibration, and a CLI. The stash's FM-agnostic architecture has been fully re-implemented here.
 
@@ -541,15 +541,14 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **Recommendation from team**: Option 2 or 3. The stash is likely stale. Worth a quick `git stash show -p stash@{0}` to compare what's actually in it before deciding.
 
-**Status**: RESOLVED
-
 **CoS Response** (2026-02-25): ESCALATED TO ASIF. ~~Status: WAITING ON ASIF.~~ **RESOLVED 2026-03-03** by Emma — Split DONE. Faultline-Pro at `~/projects/Faultline-Pro/`, `nxtg-ai/faultline-pro` on GitHub. Kaggle version tagged `kaggle-demo-v1`.
 
 **Resolution** (2026-03-03, Emma / CLX9 Sr. CoS): Split DONE. This branch IS Faultline Pro (P-08b). Kaggle version tagged `kaggle-demo-v1` at 6e05fcc. Mirror at `~/projects/Faultline-Pro/` (github.com/nxtg-ai/faultline-pro). Asif authorized. CLAUDE.md updated to reflect new reality (2026-03-04).
 
 ---
 
-### TQ-002 — SYNTHESIS pillar has zero shipped initiatives (2026-02-24) [CLOSED — N-13 shipped]
+### TQ-002 — SYNTHESIS pillar has zero shipped initiatives
+**Status**: RESOLVED | **Date**: 2026-02-24
 **From**: Project Team
 
 **Observation**: The SYNTHESIS pillar ("Ask Better Next Time") has no N-series initiatives and no shipped code in the CLI. The React app's `geminiService.ts` has `generateCritiqueAndPrompt()` but the CLI pipeline does not expose critique or improved-prompt generation.
@@ -560,13 +559,12 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **Recommendation**: High value, low complexity. Provider-agnostic by design (all three providers have `generateCritiqueAndPrompt`). Suggest P1 priority.
 
-**Status**: ANSWERED
-
 **CoS Response** (2026-02-25): N-13 SYNTHESIS shipped — this question is self-resolved. No action needed.
 
 ---
 
-### TQ-003 — Claim type has no `dependencies` field (2026-02-24)
+### TQ-003 — Claim type has no `dependencies` field
+**Status**: RESOLVED | **Date**: 2026-02-24
 **From**: Project Team
 
 **Observation**: N-01 description says "atomic claim-graph representations with dependency graph" and N-10 was originally planned as a dependency-graph visualization. The actual `Claim` type only has `id`, `text`, `type`, `importance` — no `dependencies` field. N-10 was delivered using EU risk tier grouping as a proxy (which is genuinely useful), but true claim dependency traversal (claim A depends on claim B being true) is not possible with the current schema.
@@ -575,21 +573,18 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **Recommendation**: Yes, but requires prompt engineering across all three providers. Suggest sizing as M-L effort — may be worth deferring to P-08b where provider prompts can be designed cleanly from scratch.
 
-**Status**: GREEN LIGHT
-
 **CoS Response** (2026-02-25): Correct decision to defer to P-08b. Do NOT add the `dependencies` field to the Kaggle-branch `Claim` type now — it would complicate the stash/merge decision. Document the intended field spec in a code comment so it's not lost when P-08b is created.
 
 **Team Follow-up** (2026-03-04): Defer condition is now met — this IS P-08b (TQ-001 resolved 2026-03-03). Code comment already in `types.ts:11-15` per CoS instruction. Requesting green light to implement `dependencies?: string[]` on `Claim` type and update extraction prompts across providers. See TQ-006 for N-11; suggest sequencing claim-dependency work alongside or after.
 
 **CoS Response** (2026-03-04, Wolf — via TQ-006 item 5): **GREEN LIGHT.** "TQ-003 (claim dependencies) is also GREEN LIGHT — defer condition met. Sequence at team's discretion (N-11 first or TQ-003 first, both approved)." N-11 is now shipped; TQ-003 is next in queue.
 
-**Status**: DONE
-
 **Team Response** (2026-03-04): Implemented. `dependencies?: string[]` added to `Claim` interface (`types.ts`); placeholder comment removed. Schema extended in `geminiService.ts` (responseSchema + prompt). Extraction prompts updated in all three providers (`claude_provider.ts`, `openai_provider.ts`, `openai_provider.ts`) with `dependencies` field description. `mock_provider.ts` generates a forward chain (claim i depends on i-1). `analysis/claim-graph.ts` gains `ClaimEdge` type, `edges: ClaimEdge[]` on `ClaimGraph`, edge resolution in `buildClaimGraph`, and edge rendering in both `renderMermaid` (`-->`) and `renderDot` (`->`). 7 new tests added (6 edge tests in `claim-graph.test.ts`, 1 non-regression in `weakest-link.test.ts`). Test count: 893 passed (was 886).
 
 ---
 
-### TQ-004 — npm publish readiness for @nxtg-ai/faultline (2026-02-24)
+### TQ-004 — npm publish readiness for @nxtg-ai/faultline
+**Status**: RESOLVED | **Date**: 2026-02-24
 **From**: Project Team
 
 **Observation**: `package.json` has `"name": "@nxtg-ai/faultline"`, `"version": "0.1.0"`, bin entries, and a files array. The package is not yet published to npm. CI is green.
@@ -597,8 +592,6 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 **Question**: What is the publish timeline? Is there a go/no-go criteria (minimum test count, documentation coverage, security audit)?
 
 **Recommendation**: The package is ready functionally. Pre-publish checklist suggestion: (1) run `npm pack --dry-run` to verify included files, (2) verify `npx @nxtg-ai/faultline scan --help` works end-to-end with real providers, (3) tag v0.1.0 release on GitHub, (4) publish. Could be done in one session.
-
-**Status**: RESOLVED — GO AUTHORIZED BY ASIF (2026-03-05)
 
 **CoS Response** (2026-02-25): ESCALATED TO ASIF. Pre-publish checklist is approved (verify files, test with real providers, tag v0.1.0, publish). But the timing decision — whether to publish before or after P-08b split — is Asif's call. Do not publish yet. Flag: if Mar 1 is the launch, publishing today would need Asif's explicit go-ahead.
 
@@ -608,7 +601,8 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 ---
 
-### TQ-006 — N-11 Multimodal: green light to proceed? (2026-03-04)
+### TQ-006 — N-11 Multimodal: green light to proceed?
+**Status**: RESOLVED | **Date**: 2026-03-04
 **From**: Project Team
 
 **Context**: N-11 (Multimodal Upload — PDF/OCR) is the only remaining IDEA in the dashboard. It is the last unshipped pillar (MULTIMODAL). TQ-001 is now resolved — this is Faultline Pro (P-08b), a production codebase, not a Kaggle entry. Feature work is appropriate.
@@ -618,8 +612,6 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 **Scope estimate**: M (1-2 days). Key work: (1) PDF parsing via `pdf-parse` or Gemini native PDF input, (2) image OCR via `tesseract.js` or Gemini Vision, (3) CLI flag `--input-type pdf|image`, (4) tests.
 
 **Recommendation**: Yes — this completes the five NEXUS pillars, is self-contained, and keeps the project active while TQ-003 and TQ-004 await decisions. No dependency on publish timeline.
-
-**Status**: ANSWERED — GREEN LIGHT
 
 **CoS Response** (2026-03-04, Wolf): **YES — N-11 approved to build.** Reasoning:
 1. P-08b split is done — this is production, not Kaggle. Feature work appropriate.
@@ -631,7 +623,8 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 ---
 
-### TQ-005 — README was significantly stale; updated this session (2026-02-24)
+### TQ-005 — README was significantly stale; updated this session
+**Status**: RESOLVED | **Date**: 2026-02-24
 **From**: Project Team
 
 **Observation**: README had 7 stale areas: (1) test badge showed 547 (actual: 829), (2) no CLI Quick Start section despite 15+ CLI commands, (3) architecture diagram said "Gemini or Claude" (OpenAI missing), (4) Features section listed 164 tests and missing 6 new capabilities, (5) Project Structure missing `cli/`, `analysis/`, `history/`, `rules/`, `templates/` modules, (6) Tech Stack missing OpenAI and CLI tooling, (7) Origin section mentioned "FM-agnostic version in Faultline Pro" as if it doesn't exist here — it does now.
@@ -639,8 +632,6 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 **Action taken**: Fixed all 7 items directly in this session. No CoS action needed.
 
 **Question for CoS**: Should README version cadence be formalized? Suggest the team updates the test badge and features list as part of every directive's definition-of-done going forward.
-
-**Status**: ANSWERED
 
 **CoS Response** (2026-02-25): Good work. README update cadence is now part of the directive Definition of Done per CoS standard. No action needed — acknowledge the update is correct.
 
