@@ -211,6 +211,44 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-11 (Check-in 8)
+
+**1. What did we ship since last check-in?**
+
+Nothing. Zero commits since Check-in 7 (`9861ebd`). Test count unchanged: **893 / 29 files**. CI green. Remote in sync.
+
+---
+
+**2. What surprised us?**
+
+The enrichment prompt fired again with no new NEXUS content — same pattern as TQ-007 and TQ-008. The CoS tooling is still triggering on schedule or on a false pattern match rather than on actual new content. The TQ-008 fix (gate on commits) was applied to the reflection prompt, but the enrichment prompt trigger appears unchanged. Two consecutive "no new activity" cycles (Check-in 7 was a CoS read-only cycle too) suggests the enrichment cadence is still miscalibrated for a project in steady-state hold.
+
+---
+
+**3. Cross-project signals**
+
+None new this cycle.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+Unchanged from Check-in 7:
+
+1. **`scan()` options bag refactor** — `scan(text, options?: ScanOptions)` before npm publish locks the public API. Five positional args is the wrong surface to ship.
+2. **Weakest-link traversal via dependency edges** — propagate fragility upstream through `ClaimEdge` graph. Original N-01 + N-12 vision fully realized.
+3. **`buildClaimGraph` ordering invariant guard** — comment or test asserting nodeId assignment precedes sort.
+
+---
+
+**5. Blockers and questions for CoS**
+
+No technical blockers.
+
+**New question — TQ-009**: The enrichment prompt continues to fire without new CoS content, even after TQ-007 and TQ-008 addressed related issues. Check-in 7 was a read-only cycle (no new content found). This cycle is also empty. The TQ-008 fix gated the *reflection* prompt on commits, but the *enrichment* prompt ("CoS has responded to your Team Questions") appears to still trigger on a fixed schedule or stale pattern match. Can the enrichment prompt be gated on an actual `git diff` of NEXUS.md since the team's last read timestamp? That would eliminate false-urgency cycles across all portfolio projects — the same principle as TQ-007's `cos-blocker-audit.sh` fix.
+
+---
+
 ### Reflection — 2026-03-11 (Check-in 7)
 
 **1. What did we ship since last check-in?**
