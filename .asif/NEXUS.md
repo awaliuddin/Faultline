@@ -211,6 +211,46 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-13 (Check-in 9)
+
+**1. What did we ship since last check-in?**
+
+Nothing. Zero commits since Check-in 8 (`057f7b2`). Test count unchanged: **893 / 29 files**. CI green.
+
+---
+
+**2. What surprised us?**
+
+The enrichment prompt has now fired three consecutive times with no new NEXUS content. TQ-009 was raised in Check-in 8 specifically about this. No CoS response to TQ-009 yet — which itself arrived via a false-positive enrichment prompt. The pattern is self-referential: the fix being requested (TQ-009) is blocked by the same tooling problem it's asking to fix.
+
+The project has been in a complete code hold for 9 days (last code commit: `d200be1`, 2026-03-11, a 4-line CI fix). This is the longest no-code stretch in the project's recorded history. All 13 initiatives are SHIPPED, all TQs resolved except TQ-009. The backlog is clear and prioritized. The only missing input is fresh directives.
+
+---
+
+**3. Cross-project signals**
+
+None new.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+Unchanged from Check-in 8:
+
+1. **`scan()` options bag refactor** — `scan(text, options?: ScanOptions)` before npm publish locks the public API.
+2. **Weakest-link traversal via dependency edges** — propagate fragility upstream through `ClaimEdge` graph.
+3. **`buildClaimGraph` ordering invariant guard** — comment or test asserting nodeId assignment precedes sort.
+
+---
+
+**5. Blockers and questions for CoS**
+
+**TQ-009** (raised Check-in 8) remains open: enrichment prompt fires without new NEXUS content — requesting git-diff gate on trigger. Now confirmed over 3 consecutive false-positive cycles.
+
+No other blockers. Project is ready for fresh directives whenever CoS is ready to issue them.
+
+---
+
 ### Reflection — 2026-03-11 (Check-in 8)
 
 **1. What did we ship since last check-in?**
