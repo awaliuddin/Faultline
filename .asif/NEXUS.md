@@ -211,6 +211,50 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-11 (Check-in 7)
+
+**1. What did we ship since last check-in?**
+
+Three commits since Check-in 6 (2026-03-05). One functional fix, two governance-only:
+
+- `d200be1` (Asif + Claude Opus 4.6, 2026-03-11) — **CI fix**: added `permissions: issues: write` + `contents: read` to `.github/workflows/ci.yml`. Root cause: `nxtg-ai` org has read-only permission defaults; `jayqi/failed-build-issue-action` was silently failing with "Resource not accessible by integration" and could not create issues on CI failure. Minimal change (4 lines), high signal value — without it, CI failures were not surfacing as GitHub issues.
+- `f930e8a` — NEXUS formatting: Status field moved to lead in TQ-001 through TQ-008 (readability for enrichment tooling).
+- `e664c02` — Cleaned 9 stale blocker refs across TQ entries; TQ-001/TQ-004 resolved markers clarified.
+
+Test count unchanged: **893 / 29 files**. CI green. Remote in sync.
+
+---
+
+**2. What surprised us?**
+
+**Org-level permission defaults are a silent footgun.** The `failed-build-issue-action` was present in the CI workflow but had never successfully created an issue — because the nxtg-ai org's read-only default silently blocked it with no loud failure of the CI job itself (the action uses `continue-on-error: true`). It was only caught by Asif reviewing actual GitHub Actions output. The fix is 4 lines, but the failure mode was invisible: CI jobs were "passing" while the issue-creation side-effect was silently dropping. This is a classic `continue-on-error` masking problem — the feature looked wired but was never working.
+
+---
+
+**3. Cross-project signals**
+
+- **GitHub Actions + nxtg-ai org requires explicit `permissions` block**: Any portfolio project using the `jayqi/failed-build-issue-action` (or any action that writes to GitHub Issues/PRs/etc.) must declare `permissions: issues: write` + `contents: read` explicitly at the workflow level. The org default is read-only, so this will silently fail for every project without it. Affects any project using the ASIF CI gate composite action pattern.
+
+- **`continue-on-error: true` hides broken side-effects**: When a CI step is non-critical but also non-functional, it can silently not deliver its value for months. Worth auditing other portfolio projects for actions running with `continue-on-error: true` that have never actually produced output.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+1. **`scan()` options bag refactor** — convert `scan(text, image?, providerName?, minConfidence?, ruleNames?)` to `scan(text, options?: ScanOptions)`. With npm publish GO authorized (Apache-2.0), the public API surface should be locked in cleanest form before v0.1.0 ships. Five positional args is the wrong API surface to publish.
+2. **Weakest-link traversal via dependency edges** — `analyzeWeakestLinks` currently scores claims individually by fragility. Now that `dependencies` + `ClaimEdge` are in the schema and graph, true upstream fragility propagation is possible: a claim whose dependency is contradicted should inherit elevated risk. This is the original N-01 + N-12 vision fully realized.
+3. **`buildClaimGraph` ordering invariant guard** — add a comment or test asserting that nodeId assignment (via `map()`) precedes the sort. Currently implicit; a refactor that sorts first would break edge resolution silently.
+
+---
+
+**5. Blockers and questions for CoS**
+
+No blockers. No new questions.
+
+Standing observation: TQ-004 (npm publish) is GO-authorized with P-08b as publish vehicle. If CoS wants this team to verify our 893-test build is in sync with Faultline-Pro before publish, we can run a quick diff check. Otherwise no action needed from this team.
+
+---
+
 ### Reflection — 2026-03-05 (Check-in 6)
 
 No new activity. _(One-liner per TQ-008 authorization.)_
