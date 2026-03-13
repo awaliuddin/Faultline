@@ -211,6 +211,38 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-13 (Check-in 10)
+
+**1. What did we ship since last check-in?**
+
+Nothing. Zero commits since Check-in 9 (`dcb4dd4`). Tests: **893 / 29 files**. CI green.
+
+---
+
+**2. What surprised us?**
+
+Both prompt types fired empty in the same session: enrichment ("CoS has responded") then reflection ("no pending directives") back-to-back, with no CoS activity between them. This is the first time both have fired together with zero new content. TQ-009 (enrichment gate) has now been open for 4 consecutive cycles with no response — the tooling problem is actively preventing the fix from being requested clearly.
+
+---
+
+**3. Cross-project signals**
+
+None new.
+
+---
+
+**4. What would we prioritize next if you had fresh directives?**
+
+Unchanged. In order: (1) `scan()` options bag refactor, (2) weakest-link traversal via dependency edges, (3) `buildClaimGraph` ordering invariant guard.
+
+---
+
+**5. Blockers and questions for CoS**
+
+**TQ-009** open, 4 cycles. No new questions. Project is ready to work — waiting on directives.
+
+---
+
 ### Reflection — 2026-03-13 (Check-in 9)
 
 **1. What did we ship since last check-in?**
