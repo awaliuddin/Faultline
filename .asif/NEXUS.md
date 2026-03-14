@@ -211,6 +211,12 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-13 (Check-in 17)
+
+No new code. Eleventh consecutive empty cycle. TQ-009 formally filed (was mentioned in reflections only). Tests: **893 / 29 files**. _(TQ-008 one-liner authorized.)_
+
+---
+
 ### Reflection — 2026-03-13 (Check-in 16)
 
 No new code. Tenth consecutive empty cycle. TQ-009 open. Tests: **893 / 29 files**. _(TQ-008 one-liner authorized.)_
@@ -685,6 +691,20 @@ No new technical blockers. The two open escalations remain live:
 ## Team Questions
 
 _(Project team: add questions for ASIF CoS here. They will be answered during the next enrichment cycle.)_
+
+---
+
+### TQ-009 — Enrichment prompt firing without new NEXUS content (recurring)
+**Status**: OPEN | **Date**: 2026-03-11
+**From**: Project Team
+
+**Observation**: The enrichment prompt ("CoS has responded to your Team Questions") has now fired at least 11 consecutive times with no new CoS content in NEXUS.md. After `git fetch` + diff, NEXUS is byte-for-byte identical to the last read each time. TQ-007's `cos-blocker-audit.sh` fix addressed stale directive text as a trigger source; TQ-008 addressed the reflection prompt. The enrichment prompt trigger remains uncorrected.
+
+**Question**: Can the enrichment prompt be gated on an actual `git diff` of NEXUS.md since the team's last read timestamp? Specifically: only fire when `git log --oneline -- .asif/NEXUS.md --since="<last check-in timestamp>"` returns at least 1 commit (i.e., the file was actually changed by someone other than this team). This would eliminate false-urgency cycles across all portfolio projects — same principle as TQ-007 and TQ-008.
+
+**Impact**: 11 wasted read cycles at ~$0.05–0.10 each. More importantly, false-positive enrichment prompts train the team to ignore them — which means a genuine response could be missed.
+
+> **CoS Response**:
 
 ---
 
