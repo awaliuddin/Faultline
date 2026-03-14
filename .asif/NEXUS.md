@@ -211,6 +211,54 @@ Faultline Pro (stashed FM-agnostic version) contains a provider dispatcher suppo
 
 ## Team Feedback
 
+### Reflection — 2026-03-13 (Check-in 18)
+
+**1. What did we ship since last check-in?**
+
+Governance hygiene only. No code shipped. One commit: `89a17c6` — Check-in 17 one-liner + formal TQ-009 entry. TQ-009 had been mentioned in reflection prose for 10 consecutive check-ins but was never added to the Team Questions section, meaning it would never surface to CoS enrichment tooling as a question requiring a response. Filing it formally is the fix.
+
+Tests: **893 / 29 files** (unchanged). CI green. Remote in sync.
+
+---
+
+**2. What surprised us?**
+
+**TQ-009 was self-blocking.** The question asking to fix the enrichment prompt was only reachable via the enrichment prompt it was asking to fix — and it wasn't even in the Team Questions section, so the enrichment tooling wasn't reading it at all. It existed purely as prose in the Reflection section, which the CoS reads but doesn't process as an actionable question. Formally filing it breaks the loop (or should).
+
+**Two enrichment prompts fired in the same session, back-to-back.** This is the second time this has happened (first noted in Check-in 10). The second prompt fired within minutes of the first, with no state change in between. The trigger is clearly schedule-based with no idempotency guard — if the session stays open past a second trigger window, it fires again unconditionally.
+
+**The project has now been in a complete code hold since 2026-03-04** (last real code commit was TQ-003 dependency graph). That is 9 days. The test suite is frozen at 893. All 13 initiatives remain SHIPPED. The backlog is clear and prioritized. The only missing input is a directive.
+
+---
+
+**3. Cross-project signals**
+
+- **Enrichment false-positive loop is portfolio-wide**: Any project in a steady-state hold (all directives SHIPPED, no open blocking TQs) will experience this same feedback loop. The trigger pattern doesn't distinguish between "project actively waiting for a response" and "project passively coasting." The TQ-009 fix (gate on `git log -- NEXUS.md`) would fix all of them simultaneously.
+
+- **Governance-only commits still need to pass CI gate**: The pre-push hook ran `npm test` for a NEXUS.md-only commit. 893 tests took ~7 seconds. This is acceptable overhead but worth noting: if NEXUS gets large or test times grow, a file-path-scoped CI bypass for pure-docs commits might be worth considering. Not a problem now.
+
+---
+
+**4. What would we prioritize next with fresh directives?**
+
+Unchanged for the fourth consecutive check-in:
+
+1. **`scan()` options bag refactor** — `scan(text, options?: ScanOptions)` replaces 5 positional args. With npm publish GO authorized (Apache-2.0), the public API surface should be locked in its cleanest form before `@nxtg-ai/faultline@0.1.0` ships. Five positional args is the wrong surface to publish.
+
+2. **Weakest-link traversal via dependency edges** — `analyzeWeakestLinks` scores claims individually. Now that `ClaimEdge` is wired and `dependencies` is in the schema, true upstream fragility propagation is possible: a claim whose dependency is contradicted should inherit elevated risk. This is the original N-01 + N-12 vision fully realized.
+
+3. **`buildClaimGraph` ordering invariant guard** — add a test asserting `nodeId` assignment precedes sort. Currently a silent footgun: a refactor that sorts before mapping would break edge resolution with no compile-time or test-time signal.
+
+---
+
+**5. Blockers and questions for CoS**
+
+**TQ-009** is now formally filed in Team Questions (was in reflection prose only). No other blockers.
+
+One process observation for CoS: the two-enrichment-prompt-per-session pattern (Check-ins 10 and 18 both experienced it) suggests the trigger fires more than once per session when sessions run long. An idempotency guard (e.g., mark prompt as fired at session start, don't re-fire until next session) would prevent duplicate cycles even without the full `git diff` gate from TQ-009.
+
+---
+
 ### Reflection — 2026-03-13 (Check-in 17)
 
 No new code. Eleventh consecutive empty cycle. TQ-009 formally filed (was mentioned in reflections only). Tests: **893 / 29 files**. _(TQ-008 one-liner authorized.)_
