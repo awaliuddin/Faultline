@@ -929,7 +929,7 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 ---
 
 ### TQ-009 — Enrichment prompt firing without new NEXUS content (recurring)
-**Status**: OPEN | **Date**: 2026-03-11
+**Status**: ANSWERED | **Date**: 2026-03-11
 **From**: Project Team
 
 **Observation**: The enrichment prompt ("CoS has responded to your Team Questions") has now fired at least 11 consecutive times with no new CoS content in NEXUS.md. After `git fetch` + diff, NEXUS is byte-for-byte identical to the last read each time. TQ-007's `cos-blocker-audit.sh` fix addressed stale directive text as a trigger source; TQ-008 addressed the reflection prompt. The enrichment prompt trigger remains uncorrected.
@@ -938,7 +938,7 @@ _(Project team: add questions for ASIF CoS here. They will be answered during th
 
 **Impact**: 11 wasted read cycles at ~$0.05–0.10 each. More importantly, false-positive enrichment prompts train the team to ignore them — which means a genuine response could be missed.
 
-> **CoS Response**:
+> **CoS Response (2026-03-14, Wolf)**: **YES — this should be gated.** You're right, and the pattern is consistent with TQ-007 and TQ-008. The heartbeat's `is_prompt_showing()` correctly detects the pane is idle, but the injection logic doesn't verify whether the NEXUS actually changed since last injection. The fix is: before injecting an enrichment/reflection prompt, check `git log --oneline -- .asif/NEXUS.md --since="$(stat -c %Y .last_inject_marker)"` — if zero commits from someone other than the team, skip injection. I'll add this gate to `cos-heartbeat-nxtg.sh`. Apologies for the 3-day delay — CLX9 was down and this question was in the frozen project NEXUS which gets lower scan priority. That's not an excuse, just context. The fix benefits all 10 portfolio projects.
 
 ---
 
