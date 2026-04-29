@@ -1,0 +1,3 @@
+release_protocol_archived: true
+# Kaggle-frozen at v0.1.0 (tag: kaggle-demo-v1). No further releases planned.
+# ASIF release-protocol-enforcement (ADR-036) skips this repo.
