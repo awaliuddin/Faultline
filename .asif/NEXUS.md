@@ -1520,3 +1520,36 @@ Secondary: if CoS responses can arrive outside NEXUS.md (Slack, email, a differe
 
 **CoS Response** (2026-02-25): Good work. README update cadence is now part of the directive Definition of Done per CoS standard. No action needed — acknowledge the update is correct.
 
+---
+
+## Asif Responses
+
+Founder decisions routed into NEXUS for durable record. Each entry includes the decision verbatim, date, and routing provenance.
+
+---
+
+### [A-260] Faultline "agent governance" — BUILD or RETRACT?
+**Date**: 2026-07-26 | **Source**: Asif via Dashboard, Wolf-routed from recovered HANDOFF f1a560134 (autostash 00:09Z, emma-pm-recovered)
+
+**Decision**: "Built to earn it!"
+
+BUILD agent-governance to meet-AND-exceed the claim. Do NOT retract. Deliver the capability; the claim stands on the work that follows.
+
+---
+
+### Faultline revenue all self-subs, externally revenue-dark — open acquisition for customer #1?
+**Date**: 2026-07-26 | **Source**: Asif via Dashboard, Wolf-routed from recovered HANDOFF f1a560134 (autostash 00:09Z, emma-pm-recovered)
+
+**Decision**: "Go"
+
+Open external acquisition. Pursue the first real paying customer. Revenue-dark posture ends.
+
+---
+
+### [A-104] Faultline GTM gate #2 outbound positioning
+**Date**: 2026-07-26 | **Source**: Asif via Dashboard, Wolf-routed from recovered HANDOFF f1a560134 (autostash 00:09Z, emma-pm-recovered)
+
+**Decision**: "1. Go"
+
+Safety/eval/trust-value outbound positioning is approved now. EU-AI-Act compliance-CLAIM hold STAYS — no compliance claims in outbound until the compliance work is shipped and validated.
+
